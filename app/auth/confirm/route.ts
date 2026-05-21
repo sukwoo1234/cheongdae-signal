@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/auth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -20,6 +21,11 @@ export async function GET(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.redirect(new URL("/", url));
+  }
+
+  // 어드민은 곧장 /admin으로 (온보딩·카드 건너뛰기)
+  if (isAdminEmail(user.email)) {
+    return NextResponse.redirect(new URL("/admin", url));
   }
 
   await supabase

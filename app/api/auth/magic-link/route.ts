@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAllowedCJUEmail } from "@/lib/validation/email";
+import { isAdminEmail } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const { email } = await req.json().catch(() => ({}));
@@ -8,7 +9,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
   }
   const normalized = email.trim().toLowerCase();
-  if (!isAllowedCJUEmail(normalized)) {
+  // 어드민 이메일은 도메인 제한 우회
+  if (!isAllowedCJUEmail(normalized) && !isAdminEmail(normalized)) {
     return NextResponse.json({ error: "DOMAIN_NOT_ALLOWED" }, { status: 400 });
   }
 
