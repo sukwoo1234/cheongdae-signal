@@ -21,10 +21,9 @@ export function Gating({ myCard }: Props) {
 
   if (!state) return <main className="min-h-screen flex items-center justify-center">불러오는 중...</main>;
 
-  const oppositeIsFemale = state.counts.male > state.counts.female;
-  const oppositeCount = oppositeIsFemale ? state.counts.female : state.counts.male;
-  const threshold = oppositeIsFemale ? state.config.threshold_female : state.config.threshold_male;
-  const needed = Math.max(0, threshold - oppositeCount);
+  const maleNeeded = Math.max(0, state.config.threshold_male - state.counts.male);
+  const femaleNeeded = Math.max(0, state.config.threshold_female - state.counts.female);
+  const allMet = maleNeeded === 0 && femaleNeeded === 0;
 
   return (
     <main className="min-h-screen px-6 py-8 bg-[#fffbf2]">
@@ -32,9 +31,17 @@ export function Gating({ myCard }: Props) {
         <div className="bg-orange-50 border-l-4 border-orange-400 rounded p-3 mb-4">
           <div className="text-xs font-bold text-orange-600 mb-1">⏳ 보드 준비 중</div>
           <p className="text-xs text-gray-700">
-            {needed > 0
-              ? `${oppositeIsFemale ? "여학생" : "남학생"} ${needed}명 더 등록되면 오픈돼요`
-              : "곧 시작됩니다"}
+            {allMet ? (
+              "곧 시작됩니다"
+            ) : (
+              <>
+                양쪽이 각각 임계점에 도달해야 보드가 열려요.{" "}
+                {maleNeeded > 0 && <span>남학생 <strong>{maleNeeded}명</strong></span>}
+                {maleNeeded > 0 && femaleNeeded > 0 && ", "}
+                {femaleNeeded > 0 && <span>여학생 <strong>{femaleNeeded}명</strong></span>}
+                {" 더 필요해요."}
+              </>
+            )}
           </p>
         </div>
 

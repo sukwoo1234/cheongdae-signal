@@ -1,4 +1,3 @@
-create extension if not exists pgsodium with schema pgsodium;
 create extension if not exists pgcrypto;
 
 create table public.users (
