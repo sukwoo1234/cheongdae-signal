@@ -17,7 +17,15 @@ export async function GET(req: Request) {
     .limit(50);
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
 
-  const flat = (data ?? []).map((c: { id: string; one_liner: string; color: string; hidden_by_admin: boolean; users: { email: string; gender: string } }) => ({
+  type CardJoinRow = {
+    id: string;
+    one_liner: string;
+    color: string;
+    hidden_by_admin: boolean;
+    users: { email: string; gender: string };
+  };
+
+  const flat = ((data ?? []) as unknown as CardJoinRow[]).map((c) => ({
     id: c.id,
     one_liner: c.one_liner,
     color: c.color,
