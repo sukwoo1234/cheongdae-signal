@@ -1,0 +1,17 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isAdminEmail } from "@/lib/auth";
+
+export async function PATCH(req: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !isAdminEmail(user.email)) {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
+  const updates = await req.json();
+  const admin = createAdminClient();
+  const { error } = await admin.from("session_config").update(updates).eq("id", 1);
+  if (error) return NextResponse.json({ error: "DB_ERROR", detail: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

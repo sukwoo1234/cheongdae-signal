@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --postit-yellow: #fff3b0;
+  --postit-pink: #ffd6e0;
+  --postit-green: #c8e6c9;
+  --postit-blue: #b3e5fc;
+  --postit-purple: #e1bee7;
+  --postit-orange: #ffccbc;
+  --cork: #d4b896;
+  --bg: #faf6e8;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  background: var(--bg);
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
