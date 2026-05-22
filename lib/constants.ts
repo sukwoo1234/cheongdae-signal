@@ -24,5 +24,3 @@ export const RATIO_WARN_THRESHOLD = 0.6;
 export const RATIO_CRITICAL_THRESHOLD = 0.75;
 
 export const COUNTDOWN_NOTICE_HOURS = [24, 1] as const;
-
-export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com";

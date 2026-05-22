@@ -33,12 +33,7 @@ export default function Privacy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="font-bold text-base mb-2">5. 처리 책임자</h2>
-        <p>청대 시그널 운영자 (행사 운영진 별도 안내)</p>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="font-bold text-base mb-2">6. 사용자 권리</h2>
+        <h2 className="font-bold text-base mb-2">5. 사용자 권리</h2>
         <p>로그인 후 "내 카드 관리" 페이지에서 즉시 본인 정보를 삭제할 수 있습니다.</p>
       </section>
     </main>
