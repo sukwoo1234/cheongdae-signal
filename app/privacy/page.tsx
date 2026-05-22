@@ -34,7 +34,7 @@ export default function Privacy() {
 
       <section className="mb-6">
         <h2 className="font-bold text-base mb-2">5. 처리 책임자</h2>
-        <p>admin@example.com</p>
+        <p>청대 시그널 운영자 (행사 운영진 별도 안내)</p>
       </section>
 
       <section className="mb-6">
