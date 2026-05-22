@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ADMIN_EMAIL } from "@/lib/constants";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -20,6 +21,5 @@ export async function requireUser() {
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  const target = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase();
-  return !!target && email.toLowerCase() === target;
+  return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
