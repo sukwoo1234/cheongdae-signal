@@ -135,8 +135,30 @@ export default function AdminConsole() {
             type="datetime-local"
             defaultValue={stats.config.ends_at.slice(0, 16)}
             onBlur={(e) => saveSession("ends_at", new Date(e.target.value).toISOString())}
-            className="bg-gray-900 text-xs p-1 rounded w-full"
+            className="bg-gray-900 text-xs p-1 rounded w-full mb-2"
           />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-[10px] text-gray-500 block">남자 임계점</label>
+              <input
+                type="number"
+                min={1}
+                defaultValue={stats.config.threshold_male}
+                onBlur={(e) => saveSession("threshold_male", parseInt(e.target.value, 10))}
+                className="bg-gray-900 text-xs p-1 rounded w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] text-gray-500 block">여자 임계점</label>
+              <input
+                type="number"
+                min={1}
+                defaultValue={stats.config.threshold_female}
+                onBlur={(e) => saveSession("threshold_female", parseInt(e.target.value, 10))}
+                className="bg-gray-900 text-xs p-1 rounded w-full"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="bg-red-900/30 border border-red-800 rounded p-3">
