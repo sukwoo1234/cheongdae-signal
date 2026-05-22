@@ -10,9 +10,10 @@ export async function GET(req: Request) {
 
   const q = new URL(req.url).searchParams.get("q") ?? "";
   const admin = createAdminClient();
+  // service_role은 column revoke 우회 → instagram_id 포함 가능
   const { data, error } = await admin
     .from("cards")
-    .select("id, one_liner, color, hidden_by_user, hidden_by_admin, users!inner(email, gender)")
+    .select("id, one_liner, instagram_id, color, hidden_by_user, hidden_by_admin, users!inner(email, gender)")
     .ilike("one_liner", `%${q}%`)
     .limit(50);
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
@@ -20,6 +21,7 @@ export async function GET(req: Request) {
   type CardJoinRow = {
     id: string;
     one_liner: string;
+    instagram_id: string;
     color: string;
     hidden_by_admin: boolean;
     users: { email: string; gender: string };
@@ -28,6 +30,7 @@ export async function GET(req: Request) {
   const flat = ((data ?? []) as unknown as CardJoinRow[]).map((c) => ({
     id: c.id,
     one_liner: c.one_liner,
+    instagram_id: c.instagram_id,
     color: c.color,
     hidden_by_admin: c.hidden_by_admin,
     email: c.users.email,

@@ -18,6 +18,7 @@ interface Stats {
 interface CardRow {
   id: string;
   one_liner: string;
+  instagram_id: string;
   color: string;
   email: string;
   gender: string;
@@ -46,7 +47,7 @@ export default function AdminConsole() {
   }
   useEffect(() => {
     loadStats();
-    const t = setInterval(loadStats, 5000);
+    const t = setInterval(loadStats, 10000);
     return () => clearInterval(t);
   }, []);
 
@@ -163,7 +164,7 @@ export default function AdminConsole() {
             <div key={c.id} className="bg-gray-900 p-2 rounded text-xs flex justify-between items-center">
               <div>
                 <span className="bg-yellow-200 text-gray-800 px-2 py-0.5 rounded font-semibold">{c.one_liner}</span>
-                <span className="ml-2 text-gray-500">{c.gender} · {c.email}</span>
+                <span className="ml-2 text-gray-500">{c.gender} · {c.email} · <span className="font-mono text-gray-300">@{c.instagram_id}</span></span>
               </div>
               <div className="flex gap-1">
                 <button onClick={() => hide(c.id)} className="bg-gray-700 px-2 py-1 rounded">숨김</button>
