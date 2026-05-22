@@ -1,5 +1,5 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/auth";
 
@@ -9,23 +9,23 @@ export async function GET(req: Request) {
   const type = url.searchParams.get("type") as EmailOtpType | null;
 
   if (!token_hash || !type) {
-    return NextResponse.redirect(new URL("/?error=invalid_link", url));
+    redirect("/?error=invalid_link");
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ type, token_hash });
   if (error) {
-    return NextResponse.redirect(new URL(`/?error=verify_failed`, url));
+    redirect(`/?error=verify_failed`);
   }
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(new URL("/", url));
+    redirect("/");
   }
 
   // 어드민은 곧장 /admin으로 (온보딩·카드 건너뛰기)
   if (isAdminEmail(user.email)) {
-    return NextResponse.redirect(new URL("/admin", url));
+    redirect("/admin");
   }
 
   await supabase
@@ -40,10 +40,10 @@ export async function GET(req: Request) {
 
   if (prof?.banned) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/?error=banned", url));
+    redirect("/?error=banned");
   }
   if (!prof?.gender) {
-    return NextResponse.redirect(new URL("/onboarding", url));
+    redirect("/onboarding");
   }
 
   const { count } = await supabase
@@ -51,8 +51,8 @@ export async function GET(req: Request) {
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
   if (!count) {
-    return NextResponse.redirect(new URL("/card/new", url));
+    redirect("/card/new");
   }
 
-  return NextResponse.redirect(new URL("/board", url));
+  redirect("/board");
 }
