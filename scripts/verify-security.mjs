@@ -117,10 +117,20 @@ console.log("\n[로그인한 학생 — 공개 anon 키 + 본인 JWT로 DB 직�
     r.status === 403, `status=${r.status} ${JSON.stringify(r.body)}`);
 }
 {
+  // RLS 레벨에서는 본인 카드도 보인다 — cards_self_all 이 허용하며, 카드 등록 직후
+  // insert().select() 가 동작하려면 필요한 권한이라 정책에서 뺄 수 없다.
   const r = await rest("cards?select=id,one_liner,color", TOKEN);
   const n = Array.isArray(r.body) ? r.body.length : -1;
-  check("B-1 보드가 카드를 반환한다 (본인 1 + 이성 1 = 2장)",
+  check("B-1 RLS가 이성 카드를 통과시킨다 (본인 1 + 이성 1 = 2장)",
     r.status === 200 && n === 2, `status=${r.status} 카드수=${n}`);
+}
+{
+  // 보드 화면에 실제로 실리는 목록. /api/board 가 .neq("user_id", self) 로
+  // 본인 카드를 제외하므로 이성 카드만 남아야 한다.
+  const r = await rest(`cards?select=id,one_liner,color&user_id=neq.${male.id}`, TOKEN);
+  const n = Array.isArray(r.body) ? r.body.length : -1;
+  check("보드 목록에는 본인 카드가 빠지고 이성 카드만 남는다 (1장)",
+    r.status === 200 && n === 1, `status=${r.status} 카드수=${n}`);
 }
 {
   const r = await rest("matches", TOKEN, {
