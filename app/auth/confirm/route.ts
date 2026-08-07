@@ -1,8 +1,12 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/auth";
+import { finishSignIn } from "@/lib/auth-flow";
 
+/**
+ * Supabase 이메일 템플릿이 `token_hash` 방식으로 설정된 경우의 복귀 지점.
+ * 세션 확립 이후 처리는 /auth/callback 과 완전히 동일하게 finishSignIn()을 쓴다.
+ */
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const token_hash = url.searchParams.get("token_hash");
@@ -15,44 +19,8 @@ export async function GET(req: Request) {
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ type, token_hash });
   if (error) {
-    redirect(`/?error=verify_failed`);
+    redirect("/?error=verify_failed");
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/");
-  }
-
-  // 어드민은 곧장 /admin으로 (온보딩·카드 건너뛰기)
-  if (isAdminEmail(user.email)) {
-    redirect("/admin");
-  }
-
-  await supabase
-    .from("users")
-    .upsert({ id: user.id, email: user.email! }, { onConflict: "id" });
-
-  const { data: prof } = await supabase
-    .from("users")
-    .select("gender, banned")
-    .eq("id", user.id)
-    .single();
-
-  if (prof?.banned) {
-    await supabase.auth.signOut();
-    redirect("/?error=banned");
-  }
-  if (!prof?.gender) {
-    redirect("/onboarding");
-  }
-
-  const { count } = await supabase
-    .from("cards")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-  if (!count) {
-    redirect("/card/new");
-  }
-
-  redirect("/board");
+  redirect(await finishSignIn());
 }

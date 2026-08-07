@@ -31,12 +31,33 @@ export interface BoardCard {
   color: PostitColor;
 }
 
+/** my_card() RPC 반환 형태. cards 테이블 전체가 아니라 본인에게 허용된 필드만 담긴다. */
+export interface MyCard {
+  id: string;
+  one_liner: string;
+  instagram_id: string;
+  color: PostitColor;
+  hidden_by_user: boolean;
+  hidden_by_admin: boolean;
+}
+
 export interface Match {
   id: string;
   viewer_user_id: string;
   viewed_card_id: string;
   created_at: string;
   bonus: boolean;
+}
+
+/** my_matches() RPC 반환 형태. */
+export interface MyMatch {
+  match_id: string;
+  card_id: string;
+  one_liner: string;
+  color: PostitColor;
+  instagram_id: string;
+  bonus: boolean;
+  created_at: string;
 }
 
 export interface SessionConfig {

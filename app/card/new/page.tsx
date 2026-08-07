@@ -56,13 +56,18 @@ export default function NewCard() {
         <h1 className="text-lg font-bold text-center mb-6">내 카드 만들기</h1>
 
         <label className="text-xs text-gray-600 block mb-1">한 줄 소개</label>
+        {/* maxLength(UTF-16 단위) 대신 코드포인트로 센다. 서버·DB의 20자 기준과 맞춘다. */}
         <Input
-          maxLength={ONELINER_MAX_LENGTH}
           placeholder="예: 강동원 닮은꼴"
           value={oneLiner}
-          onChange={(e) => setOneLiner(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
+          }}
         />
-        <div className="text-right text-xs text-gray-400 mt-0.5">{oneLiner.length}/{ONELINER_MAX_LENGTH}</div>
+        <div className="text-right text-xs text-gray-400 mt-0.5">
+          {[...oneLiner].length}/{ONELINER_MAX_LENGTH}
+        </div>
 
         <label className="text-xs text-gray-600 block mt-3 mb-1">인스타그램 ID</label>
         <Input

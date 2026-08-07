@@ -8,10 +8,10 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ONELINER_MAX_LENGTH, PostitColor } from "@/lib/constants";
-import type { Card } from "@/lib/types";
+import type { MyCard } from "@/lib/types";
 
 export default function MyCardPage() {
-  const [card, setCard] = useState<Card | null>(null);
+  const [card, setCard] = useState<MyCard | null>(null);
   const [oneLiner, setOneLiner] = useState("");
   const [instaId, setInstaId] = useState("");
   const [color, setColor] = useState<PostitColor>("yellow");
@@ -74,7 +74,13 @@ export default function MyCardPage() {
         </div>
 
         <label className="text-xs text-gray-600 block mb-1">한 줄 소개</label>
-        <Input value={oneLiner} maxLength={ONELINER_MAX_LENGTH} onChange={(e) => setOneLiner(e.target.value)} />
+        <Input
+          value={oneLiner}
+          onChange={(e) => {
+            const v = e.target.value;
+            if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
+          }}
+        />
         <label className="text-xs text-gray-600 block mt-3 mb-1">인스타 ID</label>
         <Input value={instaId} onChange={(e) => setInstaId(e.target.value)} />
         <label className="text-xs text-gray-600 block mt-3 mb-2">색</label>

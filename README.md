@@ -28,7 +28,11 @@ GitHub push 후 Vercel에 import. 환경변수는 `.env.example` 항목 그대�
 
 ## 어드민 접근
 
-`NEXT_PUBLIC_ADMIN_EMAIL`에 지정된 이메일로 로그인 후 `/admin` 접근.
+`ADMIN_EMAIL`(서버 전용 — `NEXT_PUBLIC_` 접두사를 붙이면 브라우저 번들에 노출된다)에
+지정된 이메일로 로그인 후 `/admin` 접근.
+
+미설정 시 아무도 어드민이 되지 못한다(fail-closed). Vercel 환경변수에도
+반드시 `ADMIN_EMAIL` 이름으로 넣어야 한다.
 
 ## 디자인 스펙 / 구현 계획
 

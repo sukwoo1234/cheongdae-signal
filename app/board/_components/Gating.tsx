@@ -1,29 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Postit } from "@/components/Postit";
 import type { PostitColor } from "@/lib/constants";
 import type { SessionState } from "@/lib/types";
 
 interface Props {
+  /** 폴링은 부모(BoardPage)가 담당한다. 여기서 따로 fetch하면 부모의 분기가
+   *  갱신되지 않아 임계점이 채워져도 보드로 넘어가지 못했다. */
+  state: SessionState;
   myCard: { one_liner: string; color: PostitColor } | null;
 }
 
-export function Gating({ myCard }: Props) {
-  const [state, setState] = useState<SessionState | null>(null);
-
-  useEffect(() => {
-    const fetchState = () => fetch("/api/session").then((r) => r.json()).then(setState);
-    fetchState();
-    const interval = setInterval(fetchState, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!state) return <main className="min-h-screen flex items-center justify-center">불러오는 중...</main>;
-
+export function Gating({ state, myCard }: Props) {
   const maleNeeded = Math.max(0, state.config.threshold_male - state.counts.male);
   const femaleNeeded = Math.max(0, state.config.threshold_female - state.counts.female);
   const allMet = maleNeeded === 0 && femaleNeeded === 0;
+  const notStarted = new Date(state.config.starts_at).getTime() > Date.now();
 
   return (
     <main className="min-h-screen px-6 py-8 bg-[#fffbf2]">
@@ -31,11 +23,15 @@ export function Gating({ myCard }: Props) {
         <div className="bg-orange-50 border-l-4 border-orange-400 rounded p-3 mb-4">
           <div className="text-xs font-bold text-orange-600 mb-1">⏳ 보드 준비 중</div>
           <p className="text-xs text-gray-700">
-            {allMet ? (
+            {notStarted ? (
+              <>
+                {new Date(state.config.starts_at).toLocaleString("ko-KR")}에 열려요.
+              </>
+            ) : allMet ? (
               "곧 시작됩니다"
             ) : (
               <>
-                양쪽이 각각 임계점에 도달해야 보드가 열려요.{" "}
+                남녀가 각각 일정 인원 이상 모여야 보드가 열려요.{" "}
                 {maleNeeded > 0 && <span>남학생 <strong>{maleNeeded}명</strong></span>}
                 {maleNeeded > 0 && femaleNeeded > 0 && ", "}
                 {femaleNeeded > 0 && <span>여학생 <strong>{femaleNeeded}명</strong></span>}

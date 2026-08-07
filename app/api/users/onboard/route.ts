@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getActiveUser, denialResponse } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const { supabase, user, denial } = await getActiveUser();
+  if (denial) return denialResponse(denial);
+  if (!user) return denialResponse("UNAUTHENTICATED");
 
   const { gender, terms, privacy } = await req.json().catch(() => ({}));
 
@@ -15,17 +15,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "TERMS_REQUIRED" }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      gender,
-      terms_accepted_at: new Date().toISOString(),
-      privacy_accepted_at: new Date().toISOString(),
-    })
-    .eq("id", user.id);
+  // users 테이블에 대한 직접 UPDATE 권한은 회수됐다.
+  // 이 RPC는 gender가 아직 null일 때만 통과하므로 성별 변경이 DB에서 1회로 강제된다.
+  const { error } = await supabase.rpc("complete_onboarding", { p_gender: gender });
 
   if (error) {
-    return NextResponse.json({ error: "DB_ERROR", detail: error.message }, { status: 500 });
+    if (error.message.includes("GENDER_ALREADY_SET")) {
+      return NextResponse.json({ error: "GENDER_ALREADY_SET" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

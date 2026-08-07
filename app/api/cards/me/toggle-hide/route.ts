@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getActiveUser, denialResponse } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const { supabase, user, denial } = await getActiveUser();
+  if (denial) return denialResponse(denial);
+  if (!user) return denialResponse("UNAUTHENTICATED");
 
-  const { hidden } = await req.json();
+  const { hidden } = await req.json().catch(() => ({}));
   const { error } = await supabase
     .from("cards")
     .update({ hidden_by_user: !!hidden })
