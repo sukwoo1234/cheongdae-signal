@@ -26,8 +26,8 @@ export default function Landing() {
       const data = await res.json().catch(() => ({ error: "UNKNOWN" }));
       const msgs: Record<string, string> = {
         DOMAIN_NOT_ALLOWED: "청주대학교 이메일 (@cju.ac.kr)만 가능해요",
-        BANNED: "차단된 계정입니다",
         INVALID_EMAIL: "이메일 형식이 잘못됐어요",
+        RATE_LIMITED: "너무 자주 요청했어요. 1분 뒤에 다시 시도해주세요",
         SEND_FAILED: "메일 발송 실패. 잠시 후 다시 시도해주세요",
       };
       setError(msgs[data.error] || "오류가 발생했어요");

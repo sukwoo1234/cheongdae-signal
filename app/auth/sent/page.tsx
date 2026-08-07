@@ -10,6 +10,7 @@ function SentInner() {
   const [cooldown, setCooldown] = useState(60);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -19,14 +20,26 @@ function SentInner() {
 
   async function resend() {
     setResending(true);
-    await fetch("/api/auth/magic-link", {
+    setError(null);
+    const res = await fetch("/api/auth/magic-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
     setResending(false);
-    setResent(true);
     setCooldown(60);
+    if (res.ok) {
+      setResent(true);
+      return;
+    }
+    // 서버측 한도에 걸리면 실제로는 메일이 안 갔는데도 예전 코드는
+    // "다시 보냈어요"를 띄웠다. 응답을 확인해서 사실대로 알린다.
+    const data = await res.json().catch(() => ({}));
+    setError(
+      data.error === "RATE_LIMITED"
+        ? "너무 자주 요청했어요. 잠시 후 다시 시도해주세요"
+        : "발송에 실패했어요. 잠시 후 다시 시도해주세요"
+    );
   }
 
   return (
@@ -50,6 +63,7 @@ function SentInner() {
       >
         {resent ? "다시 보냈어요" : cooldown > 0 ? `다시 보내기 (${cooldown}s)` : "다시 보내기"}
       </Button>
+      {error && <p className="text-red-600 text-xs text-center mt-3">{error}</p>}
     </main>
   );
 }

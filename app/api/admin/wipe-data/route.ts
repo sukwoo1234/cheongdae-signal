@@ -21,6 +21,7 @@ export async function POST() {
   }
 
   await admin.from("banned_emails").delete().neq("email", "");
+  await admin.rpc("purge_magic_link_throttle");
 
   return NextResponse.json({ ok: true });
 }
