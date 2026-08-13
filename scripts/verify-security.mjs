@@ -201,6 +201,13 @@ console.log("\n[정상 기능이 여전히 동작하는가]");
 }
 
 // --------------------------------------------------------------- 정리
+// 이 스크립트는 검사를 위해 보드를 열어둔다. 반드시 다시 잠근다 —
+// 잠그지 않으면 테스트 실행이 끝난 뒤에도 보드가 열린 채 남는다.
 await admin.from("matches").delete().eq("viewer_user_id", male.id);
-console.log(`\n결과: ${pass} PASS / ${fail} FAIL\n`);
+await admin.from("session_config").update({ force_locked: true }).eq("id", 1);
+
+const { data: cfg } = await admin
+  .from("session_config").select("force_locked").eq("id", 1).single();
+console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);
+console.log(`정리 완료 — 매칭 기록 삭제 · 보드 잠금(${cfg?.force_locked})\n`);
 process.exit(fail === 0 ? 0 : 1);
