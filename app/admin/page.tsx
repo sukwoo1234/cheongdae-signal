@@ -95,8 +95,30 @@ export default function AdminConsole() {
     const t = prompt("정말 모든 데이터를 폐기하려면 'WIPE'를 입력하세요");
     if (t !== "WIPE") return;
     const r = await fetch("/api/admin/wipe-data", { method: "POST" });
-    if (r.ok) alert("폐기 완료");
-    else alert("실패");
+    const d = await r.json().catch(() => null);
+
+    // 예전에는 성공/실패만 띄웠다. 폐기는 되돌릴 수 없고 개인정보 처리방침이
+    // "전량 파기"를 약속하므로, 무엇이 몇 건 지워졌고 무엇이 남았는지 보여준다.
+    if (!d) { alert("응답을 읽지 못했습니다. 폐기 여부를 직접 확인하세요."); return; }
+
+    const summary =
+      `삭제 — 매칭 ${d.deleted?.matches ?? 0} · 카드 ${d.deleted?.cards ?? 0} · ` +
+      `사용자 ${d.deleted?.users ?? 0} · 계정 ${d.deleted?.authUsers ?? 0} · ` +
+      `차단목록 ${d.deleted?.bannedEmails ?? 0}`;
+
+    if (d.ok) {
+      alert(`폐기 완료\n\n${summary}\n\n남은 데이터 없음.`);
+    } else {
+      const left = d.remaining
+        ? `\n남은 것 — 매칭 ${d.remaining.matches} · 카드 ${d.remaining.cards} · ` +
+          `사용자 ${d.remaining.users} · 계정 ${d.remaining.authUsers}`
+        : "";
+      alert(
+        `폐기가 완전히 끝나지 않았습니다.\n\n${summary}${left}\n\n` +
+        `오류:\n${(d.errors ?? ["(없음)"]).join("\n")}\n\n다시 실행하세요.`
+      );
+    }
+    loadStats();
   }
 
   if (!stats) return <main className="p-8 text-sm">불러오는 중...</main>;
