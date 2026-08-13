@@ -12,6 +12,7 @@ const KNOWN_ERRORS = [
   "ONBOARDING_INCOMPLETE",
   "NO_CARD",
   "BANNED",
+  "CARD_FULL",
 ];
 
 export async function POST(req: Request) {

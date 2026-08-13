@@ -67,6 +67,8 @@ export interface SessionConfig {
   threshold_male: number;
   threshold_female: number;
   force_locked: boolean;
+  /** 카드 하나가 열람될 수 있는 최대 횟수. null이면 무제한. */
+  max_views_per_card: number | null;
 }
 
 export interface SessionState {

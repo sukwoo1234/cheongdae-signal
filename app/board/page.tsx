@@ -88,6 +88,7 @@ export default function BoardPage() {
         CARD_HIDDEN: "이 카드는 더 이상 볼 수 없어요",
         SAME_GENDER: "이 카드는 열 수 없어요",
         CANNOT_VIEW_OWN_CARD: "내 카드는 열 수 없어요",
+        CARD_FULL: "이 카드는 마감됐어요. 다른 카드를 골라주세요",
         NO_CARD: "먼저 내 카드를 등록해야 슬롯이 생겨요",
         BANNED: "이용이 제한된 계정이에요",
       };

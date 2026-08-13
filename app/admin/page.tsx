@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { SessionConfig } from "@/lib/types";
 
+// config 형태는 lib/types의 SessionConfig를 그대로 쓴다.
+// 예전에는 여기에 필드를 손으로 복사해둬서, 컬럼이 추가될 때마다 어긋났다.
 interface Stats {
   male: number;
   female: number;
   matches: number;
-  config: {
-    starts_at: string;
-    ends_at: string;
-    force_locked: boolean;
-    threshold_male: number;
-    threshold_female: number;
-  };
+  config: SessionConfig;
 }
 
 interface CardRow {
@@ -159,6 +156,25 @@ export default function AdminConsole() {
               />
             </div>
           </div>
+
+          <label className="text-[10px] text-gray-500 block mt-2">카드당 최대 열람 수</label>
+          <input
+            type="number"
+            min={1}
+            placeholder="비우면 무제한"
+            defaultValue={stats.config.max_views_per_card ?? ""}
+            onBlur={(e) => {
+              const raw = e.target.value.trim();
+              const n = raw === "" ? null : parseInt(raw, 10);
+              if (n !== null && (!Number.isFinite(n) || n < 1)) return;
+              saveSession("max_views_per_card", n);
+            }}
+            className="bg-gray-900 text-xs p-1 rounded w-full"
+          />
+          <p className="text-[10px] text-gray-500 mt-1">
+            한 카드가 이 횟수만큼 열리면 보드에서 내려간다. 성비가 기울 때
+            인기 카드에 연락이 몰리는 걸 막는 안전망. 성비가 정상이면 거의 작동하지 않는다.
+          </p>
         </div>
 
         <div className="bg-red-900/30 border border-red-800 rounded p-3">
