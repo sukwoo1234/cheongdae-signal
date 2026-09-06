@@ -4,7 +4,10 @@ import { useEffect } from "react";
 
 export default function EndPage() {
   useEffect(() => {
-    fetch("/api/auth/logout", { method: "POST" });
+    fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
   }, []);
 
   return (

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
+import { getAdminContext, isAdminUser } from "@/lib/auth";
+import { requireAjaxRequest } from "@/lib/csrf";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -16,11 +16,17 @@ const NIL_UUID = "00000000-0000-0000-0000-000000000000";
  * 또 모든 오류를 무시하고 무조건 ok:true 를 반환해서, 폐기가 실패해도
  * 운영자는 성공한 줄 알았다. 실패를 그대로 보고한다.
  */
-export async function POST() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) {
+export async function POST(req: Request) {
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
+  const { user } = await getAdminContext();
+  if (!user) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  if (body?.confirm !== "WIPE") {
+    return NextResponse.json({ error: "CONFIRMATION_REQUIRED" }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -28,7 +34,11 @@ export async function POST() {
   const deleted = { matches: 0, cards: 0, users: 0, authUsers: 0, bannedEmails: 0 };
 
   const countOf = async (table: string) => {
-    const { count } = await admin.from(table).select("*", { count: "exact", head: true });
+    const { count, error } = await admin.from(table).select("*", { count: "exact", head: true });
+    if (error) {
+      errors.push(`count ${table}: ${error.message}`);
+      return 0;
+    }
     return count ?? 0;
   };
 
@@ -63,7 +73,7 @@ export async function POST() {
       errors.push(`listUsers: ${error.message}`);
       break;
     }
-    const targets = (data?.users ?? []).filter((u) => !isAdminEmail(u.email));
+    const targets = (data?.users ?? []).filter((u) => !isAdminUser(u));
     if (targets.length === 0) break;
 
     let progressed = false;
@@ -82,9 +92,8 @@ export async function POST() {
       errors.push(`auth 계정 ${targets.length}건을 삭제하지 못했습니다`);
       break;
     }
-    if (round === MAX_ROUNDS - 1) {
-      errors.push("auth 계정이 너무 많아 한 번에 끝내지 못했습니다. 다시 실행하세요");
-    }
+    // 마지막 라운드에서 정확히 모두 삭제된 경우에는 실패로 표시하지 않는다.
+    // 실제 잔여 계정은 아래 최종 검증에서 다시 확인한다.
   }
 
   // 실제로 비었는지 확인한다. 성공 응답이 곧 검증이어야 한다.
@@ -94,8 +103,14 @@ export async function POST() {
     users: await countOf("users"),
     bannedEmails: await countOf("banned_emails"),
   };
-  const { data: authAfter } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  const remainingAuth = (authAfter?.users ?? []).filter((u) => !isAdminEmail(u.email)).length;
+  const { data: authAfter, error: authAfterError } = await admin.auth.admin.listUsers({
+    page: 1,
+    perPage: 200,
+  });
+  if (authAfterError) errors.push(`listUsers(final): ${authAfterError.message}`);
+  const remainingAuth = authAfterError
+    ? null
+    : (authAfter?.users ?? []).filter((u) => !isAdminUser(u)).length;
 
   const clean =
     errors.length === 0 &&

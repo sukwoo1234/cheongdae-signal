@@ -18,7 +18,10 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "").toLowerCase();
-const isAdminEmail = (e) => !!e && !!ADMIN_EMAIL && e.toLowerCase() === ADMIN_EMAIL;
+const ADMIN_USER_ID = (process.env.ADMIN_USER_ID ?? "").trim();
+const isAdminUser = (u) =>
+  !!u && !!ADMIN_USER_ID && u.id === ADMIN_USER_ID &&
+  !!u.email && !!ADMIN_EMAIL && u.email.toLowerCase() === ADMIN_EMAIL;
 
 let pass = 0, fail = 0;
 const check = (name, ok, detail = "") => {
@@ -31,8 +34,8 @@ if ((existing ?? []).length > 5) {
   console.error(`중단: 사용자 ${existing.length}명. 실제 참가자가 있는 DB로 보인다.`);
   process.exit(1);
 }
-if (!ADMIN_EMAIL) {
-  console.error("ADMIN_EMAIL 이 없어 어드민 보존 여부를 검증할 수 없다.");
+if (!ADMIN_EMAIL || !ADMIN_USER_ID) {
+  console.error("ADMIN_EMAIL 또는 ADMIN_USER_ID가 없어 어드민 보존 여부를 검증할 수 없다.");
   process.exit(1);
 }
 
@@ -59,7 +62,7 @@ const errors = [];
 for (let round = 0; round < 50; round++) {
   const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   if (error) { errors.push(error.message); break; }
-  const targets = (data?.users ?? []).filter((u) => !isAdminEmail(u.email));
+  const targets = (data?.users ?? []).filter((u) => !isAdminUser(u));
   if (targets.length === 0) break;
 
   let progressed = false;
@@ -75,7 +78,7 @@ for (let round = 0; round < 50; round++) {
 const after = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
 const left = after.data.users;
 const orphansLeft = left.filter((u) => ORPHANS.includes(u.email)).length;
-const adminLeft = left.filter((u) => isAdminEmail(u.email)).length;
+const adminLeft = left.filter((u) => isAdminUser(u)).length;
 
 console.log();
 check("고아 계정이 전부 삭제된다", orphansLeft === 0, `${orphansLeft}건 남음`);

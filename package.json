@@ -14,21 +14,25 @@
   "dependencies": {
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
-    "next": "^15.0.0",
+    "next": "^15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.28",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitest/ui": "^2.0.0",
-    "happy-dom": "^15.0.0",
-    "postcss": "^8.4.0",
-    "supabase": "^1.200.0",
+    "@vitest/ui": "^5.0.0",
+    "happy-dom": "^20.14.0",
+    "postcss": "^8.5.28",
+    "supabase": "^2.116.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^5.0.0"
   }
 }

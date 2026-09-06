@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
+import { getAdminContext } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  const { user } = await getAdminContext();
+  if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const q = new URL(req.url).searchParams.get("q") ?? "";
+  if (q.length > 100) {
+    return NextResponse.json({ error: "QUERY_TOO_LONG" }, { status: 400 });
+  }
   const admin = createAdminClient();
   // service_role은 column revoke 우회 → instagram_id 포함 가능
   const { data, error } = await admin

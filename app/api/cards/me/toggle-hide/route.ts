@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
+import { requireAjaxRequest } from "@/lib/csrf";
 
 export async function POST(req: Request) {
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
   const { supabase, user, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");

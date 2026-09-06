@@ -209,7 +209,7 @@ $ node --env-file=.env.local scripts/verify-security.mjs
 > ⚠️ 이 스크립트는 매칭 기록을 삭제하고 세션 설정을 덮어쓴다.
 > 사용자 수가 임계치를 넘으면 스스로 실행을 거부하지만, 운영 중에는 돌리지 말 것.
 
-입력 검증은 별도 유닛 테스트로 다룬다 (`npm test`, 23개).
+입력 검증과 인증 경계 회귀는 별도 유닛 테스트로 다룬다 (`npm test`).
 한 줄 소개 길이는 DB의 `char_length`와 맞추기 위해 **UTF-16 단위가 아니라 코드포인트로** 센다.
 
 ---
@@ -247,8 +247,15 @@ npm run build     # 프로덕션 빌드
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 공개 anon key (브라우저에 노출됨 — 정상) |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용. RLS를 우회하므로 절대 클라이언트로 넘기지 말 것 |
-| `ADMIN_EMAIL` | 어드민 콘솔 접근 이메일. **`NEXT_PUBLIC_` 접두사 금지.** 미설정 시 아무도 접근 불가(fail-closed) |
+| `ADMIN_EMAIL` | 어드민 계정 이메일. **`NEXT_PUBLIC_` 접두사 금지.** |
+| `ADMIN_USER_ID` | Supabase Auth의 관리자 사용자 UUID. 이메일과 함께 일치해야 어드민 권한 부여 (미설정 시 fail-closed) |
+| `ADMIN_REQUIRE_MFA` | 관리자 API에 AAL2(TOTP 등)를 요구하는 스위치. 기본값은 `true` |
 | `NEXT_PUBLIC_SITE_URL` | 매직링크 복귀 주소의 기준이 되는 배포 URL |
+
+매직링크 요청은 브라우저별 일회성 `state`로 묶인다. 따라서 Supabase의
+Authentication → URL Configuration에는 production의 `/auth/callback?*` 패턴을
+등록해야 하며, preview URL은 필요한 범위만 별도로 등록한다. 관리자 계정은 먼저
+검증된 TOTP factor를 등록해야 로그인 뒤 `/auth/mfa`에서 관리자 콘솔에 들어갈 수 있다.
 
 ---
 
@@ -257,7 +264,8 @@ npm run build     # 프로덕션 빌드
 ```
 app/
   api/            route handlers (인증 · 카드 · 보드 · 매칭 · 어드민)
-  auth/callback   매직링크 복귀 지점 (해시 / token_hash / code 세 형태 모두 처리)
+  auth/callback   state로 브라우저에 묶인 매직링크 복귀 지점
+  auth/mfa        관리자 AAL2(TOTP) step-up
   board/          보드 + 임계점 게이팅
   admin/          운영 콘솔
 lib/
@@ -269,6 +277,10 @@ supabase/migrations/
   0001~0005       스키마 · RLS · 암호화 RPC · 스케줄러
   0006            RLS/권한 전면 수정 (위 "설계 리뷰" 항목)
   0007~0008       매직링크 발송 한도
+  0009            카드별 열람 상한
+  0010            관리자 UUID·동의·스케줄러 권한 보강
+  0011            매직링크 인증 방식 DB 경계
+  0012            throttle 행 보존기간 정리
 scripts/
   verify-security.mjs   PostgREST 직접 호출 기반 인가 검증
 docs/
@@ -286,4 +298,12 @@ docs/
 - `force_locked = true`로 즉시 보드를 잠글 수 있다 (응급용)
 - 커스텀 SMTP를 쓸 경우 Supabase의 **Authentication → Rate Limits** 발송 한도도 함께 올려야 한다.
   기본값(시간당 30건)은 수백 명 규모에 부족하다
+- 배포된 Supabase에서도 **Confirm email을 켜고**, **CAPTCHA protection을 켜고**,
+  세션 timebox/inactivity timeout을 각각 `48h`/`8h`로 설정한다. `config.toml`은
+  로컬 설정이므로 hosted 프로젝트에는 Dashboard에서 별도로 반영해야 한다.
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`를 설정하고 Supabase CAPTCHA provider에 같은
+  Turnstile secret을 등록한다. production에서는 토큰 없는 매직링크 발송을 거부한다.
+- `supabase db push` 전에 staging에서 `0010`~`0012` 마이그레이션을 적용하고,
+  `ADMIN_USER_ID`가 실제 Auth UUID인지 확인한다. `ADMIN_REQUIRE_MFA=true`인
+  상태에서 관리자 TOTP factor가 verified인지도 확인한다.
 - 데이터 폐기는 자동화하지 않았다. 어드민이 명시적으로 실행한다

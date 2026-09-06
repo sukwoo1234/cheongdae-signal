@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
+import { getAdminContext } from "@/lib/auth";
+import { requireAjaxRequest } from "@/lib/csrf";
 
 /**
  * 예전에는 요청 본문을 그대로 update()에 넘겼다. 어드민 전용이라 권한 문제는 없지만,
@@ -22,9 +22,10 @@ function isValidTimestamp(v: unknown): v is string {
 }
 
 export async function PATCH(req: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) {
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
+  const { user } = await getAdminContext();
+  if (!user) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 

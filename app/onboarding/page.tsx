@@ -20,7 +20,10 @@ export default function Onboarding() {
     setError(null);
     const res = await fetch("/api/users/onboard", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({ gender, terms, privacy }),
     });
     if (res.ok) {

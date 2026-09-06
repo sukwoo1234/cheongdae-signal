@@ -54,12 +54,18 @@ export default function AdminConsole() {
   }
 
   async function hide(id: string) {
-    await fetch(`/api/admin/cards/${id}/hide`, { method: "POST" });
+    await fetch(`/api/admin/cards/${id}/hide`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
     doSearch();
   }
   async function del(id: string) {
     if (!confirm("이 카드를 삭제하고 사용자를 차단할까요?")) return;
-    await fetch(`/api/admin/cards/${id}/delete`, { method: "POST" });
+    await fetch(`/api/admin/cards/${id}/delete`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
     doSearch();
   }
 
@@ -68,19 +74,28 @@ export default function AdminConsole() {
     if (r.ok) setUserInfo(await r.json());
   }
   async function grantSlot(userId: string) {
-    await fetch(`/api/admin/users/${userId}/grant-slot`, { method: "POST" });
+    await fetch(`/api/admin/users/${userId}/grant-slot`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
     loadUser();
   }
   async function ban(userId: string) {
     if (!confirm("이 사용자를 차단할까요?")) return;
-    await fetch(`/api/admin/users/${userId}/ban`, { method: "POST" });
+    await fetch(`/api/admin/users/${userId}/ban`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
     loadUser();
   }
 
   async function saveSession(field: string, value: unknown) {
     await fetch("/api/admin/session-config", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({ [field]: value }),
     });
     loadStats();
@@ -94,7 +109,14 @@ export default function AdminConsole() {
   async function wipeData() {
     const t = prompt("정말 모든 데이터를 폐기하려면 'WIPE'를 입력하세요");
     if (t !== "WIPE") return;
-    const r = await fetch("/api/admin/wipe-data", { method: "POST" });
+    const r = await fetch("/api/admin/wipe-data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({ confirm: "WIPE" }),
+    });
     const d = await r.json().catch(() => null);
 
     // 예전에는 성공/실패만 띄웠다. 폐기는 되돌릴 수 없고 개인정보 처리방침이

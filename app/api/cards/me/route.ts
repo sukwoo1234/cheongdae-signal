@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
 import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
+import { requireAjaxRequest } from "@/lib/csrf";
 
 export async function GET() {
   const { supabase, user, denial } = await getActiveUser();
@@ -17,6 +18,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
   const { supabase, user, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");

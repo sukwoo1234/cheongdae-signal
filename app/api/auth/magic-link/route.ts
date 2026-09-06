@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAllowedCJUEmail } from "@/lib/validation/email";
-import { isAdminEmail } from "@/lib/auth";
+import { isConfiguredAdminEmail } from "@/lib/auth";
+import { requireAjaxRequest } from "@/lib/csrf";
+import { createLoginState, LOGIN_STATE_COOKIE, loginStateCookieOptions } from "@/lib/auth-state";
 import {
   MAGIC_LINK_RESEND_COOLDOWN_SEC,
   MAGIC_LINK_MAX_PER_EMAIL_PER_HOUR,
@@ -28,12 +30,23 @@ function clientIp(req: Request): string {
 }
 
 export async function POST(req: Request) {
-  const { email } = await req.json().catch(() => ({}));
+  // 로그인 요청 자체가 cross-site form POST로 시작되면 공격자가 자기 이메일의
+  // 링크를 피해자 브라우저에 심을 수 있다. JSON + custom header 조합은 브라우저의
+  // CORS preflight를 요구하므로 외부 사이트가 이 흐름을 시작할 수 없다.
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
+
+  const body = await req.json().catch(() => ({}));
+  const email = body?.email;
+  const captchaToken = typeof body?.captcha_token === "string" ? body.captcha_token : "";
+  if (process.env.NODE_ENV === "production" && !captchaToken) {
+    return NextResponse.json({ error: "CAPTCHA_REQUIRED" }, { status: 400 });
+  }
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
   }
   const normalized = email.trim().toLowerCase();
-  if (!isAllowedCJUEmail(normalized) && !isAdminEmail(normalized)) {
+  if (!isAllowedCJUEmail(normalized) && !isConfiguredAdminEmail(normalized)) {
     return NextResponse.json({ error: "DOMAIN_NOT_ALLOWED" }, { status: 400 });
   }
 
@@ -73,10 +86,18 @@ export async function POST(req: Request) {
   // "이 주소가 차단됐는지" 확인하는 열거 도구가 된다. 메일만 보내지 않는다.
   if (ban) return NextResponse.json({ ok: true });
 
+  const state = createLoginState();
+  const redirectUrl = new URL(
+    "/auth/callback",
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  );
+  redirectUrl.searchParams.set("state", state);
+
   const { error } = await admin.auth.signInWithOtp({
     email: normalized,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+      emailRedirectTo: redirectUrl.toString(),
+      ...(captchaToken ? { captchaToken } : {}),
     },
   });
 
@@ -84,5 +105,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "SEND_FAILED" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(LOGIN_STATE_COOKIE, state, loginStateCookieOptions());
+  return response;
 }

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
+import { getAdminContext } from "@/lib/auth";
+import { requireAjaxRequest } from "@/lib/csrf";
 
-export async function POST(_: Request, ctx: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const csrfError = requireAjaxRequest(req);
+  if (csrfError) return csrfError;
+  const { user } = await getAdminContext();
+  if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   const { id } = await ctx.params;
   const admin = createAdminClient();
 
@@ -24,9 +25,23 @@ export async function POST(_: Request, ctx: { params: Promise<{ id: string }> })
   // 부분 유니크 인덱스 점유가 풀려 그들의 슬롯이 되살아난다
   // (= 어그로 카드로 다수를 끌어들인 뒤 삭제를 유도하면 슬롯을 뿌릴 수 있다).
   // 보드에서 내리고 계정을 차단하는 것으로 모더레이션 목적은 달성된다.
-  await admin.from("cards").update({ hidden_by_admin: true }).eq("id", id);
-  await admin.from("banned_emails").upsert({ email, reason: "admin_card_delete" });
-  await admin.from("users").update({ banned: true, banned_reason: "admin_card_delete" }).eq("id", card.user_id);
+  const { error: hideError } = await admin
+    .from("cards")
+    .update({ hidden_by_admin: true })
+    .eq("id", id);
+  if (hideError) return NextResponse.json({ error: "MODERATION_FAILED" }, { status: 500 });
+
+  const { error: banEmailError } = await admin
+    .from("banned_emails")
+    .upsert({ email, reason: "admin_card_delete" });
+  if (banEmailError) return NextResponse.json({ error: "MODERATION_FAILED" }, { status: 500 });
+
+  const { error: banUserError } = await admin
+    .from("users")
+    .update({ banned: true, banned_reason: "admin_card_delete" })
+    .eq("id", card.user_id);
+  if (banUserError) return NextResponse.json({ error: "MODERATION_FAILED" }, { status: 500 });
+
   await admin.auth.admin.signOut(card.user_id, "global").catch(() => {});
   return NextResponse.json({ ok: true });
 }

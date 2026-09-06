@@ -29,6 +29,7 @@ export default function AuthCallbackPage() {
       const supabase = createClient();
       const url = new URL(window.location.href);
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const state = url.searchParams.get("state");
 
       const errorDescription =
         hash.get("error_description") ?? url.searchParams.get("error_description");
@@ -37,10 +38,15 @@ export default function AuthCallbackPage() {
       const tokenHash = url.searchParams.get("token_hash");
       const type = url.searchParams.get("type") as EmailOtpType | null;
       const code = url.searchParams.get("code");
+      const hashType = hash.get("type");
 
       let ok = false;
 
-      if (errorDescription) {
+      if (!state) {
+        ok = false;
+      } else if (errorDescription) {
+        ok = false;
+      } else if ((type && type !== "magiclink") || (hashType && hashType !== "magiclink")) {
         ok = false;
       } else if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
@@ -64,9 +70,16 @@ export default function AuthCallbackPage() {
       // 주소창에 남은 토큰을 즉시 제거한다 (뒤로가기·링크 공유로 새어나가지 않도록).
       window.history.replaceState({}, "", "/auth/callback");
 
-      const res = await fetch("/api/auth/finish", { method: "POST" });
+      const res = await fetch("/api/auth/finish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ state }),
+      });
       const data = (await res.json().catch(() => ({}))) as { next?: string };
-      router.replace(data.next ?? "/");
+      router.replace(res.ok ? (data.next ?? "/") : "/?error=auth_failed");
     })();
   }, [router]);
 

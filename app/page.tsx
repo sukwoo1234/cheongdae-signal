@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { AuthCaptcha } from "@/components/AuthCaptcha";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
@@ -17,9 +20,11 @@ export default function Landing() {
     setError(null);
     const res = await fetch("/api/auth/magic-link", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ email, captcha_token: captchaToken }),
     });
+    setCaptchaToken("");
+    setCaptchaKey((key) => key + 1);
     if (res.ok) {
       router.push(`/auth/sent?email=${encodeURIComponent(email)}`);
     } else {
@@ -29,6 +34,7 @@ export default function Landing() {
         INVALID_EMAIL: "이메일 형식이 잘못됐어요",
         RATE_LIMITED: "너무 자주 요청했어요. 1분 뒤에 다시 시도해주세요",
         SEND_FAILED: "메일 발송 실패. 잠시 후 다시 시도해주세요",
+        CAPTCHA_REQUIRED: "자동화 방지 인증을 완료해주세요",
       };
       setError(msgs[data.error] || "오류가 발생했어요");
       setLoading(false);
@@ -51,6 +57,7 @@ export default function Landing() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <AuthCaptcha key={captchaKey} onToken={setCaptchaToken} />
         <Button type="submit" disabled={loading || !email}>
           {loading ? "보내는 중..." : "매직링크 받기"}
         </Button>

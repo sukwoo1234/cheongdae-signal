@@ -10,17 +10,18 @@ import { finishSignIn } from "@/lib/auth-flow";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const token_hash = url.searchParams.get("token_hash");
-  const type = url.searchParams.get("type") as EmailOtpType | null;
+  const type = url.searchParams.get("type");
+  const state = url.searchParams.get("state");
 
-  if (!token_hash || !type) {
+  if (!token_hash || type !== "magiclink" || !state) {
     redirect("/?error=invalid_link");
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ type, token_hash });
+  const { error } = await supabase.auth.verifyOtp({ type: type as EmailOtpType, token_hash });
   if (error) {
     redirect("/?error=verify_failed");
   }
 
-  redirect(await finishSignIn());
+  redirect(await finishSignIn(state));
 }

@@ -26,7 +26,10 @@ export default function NewCard() {
     setError(null);
     const res = await fetch("/api/cards", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({
         one_liner: oneLiner.trim(),
         instagram_id: instaId.trim(),

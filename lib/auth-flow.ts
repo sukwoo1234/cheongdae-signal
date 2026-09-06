@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail, isAllowedAccountEmail } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/auth";
+import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
 
 /**
  * 로그인 직후 공통 마무리 처리. 어느 콜백 경로로 들어왔든 여기를 지난다.
@@ -12,21 +14,50 @@ import { isAdminEmail, isAllowedAccountEmail } from "@/lib/auth";
  *
  * @returns 리다이렉트할 경로
  */
-export async function finishSignIn(): Promise<string> {
+export async function finishSignIn(providedState: string | null | undefined): Promise<string> {
   const supabase = await createClient();
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get(LOGIN_STATE_COOKIE)?.value;
+  const clearState = () => cookieStore.set(LOGIN_STATE_COOKIE, "", loginStateCookieOptions(0));
+
+  if (!matchesLoginState(expectedState, providedState ?? undefined)) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return "/?error=auth_failed";
+  }
+
+  // getUser()만으로는 현재 로그인 방식(비밀번호/복구/매직링크)을 구분할 수 없다.
+  // 서명 검증된 JWT claims의 amr을 확인해 앱의 유일한 로그인 방식만 허용한다.
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !claimsData || !hasMagicLinkAuthMethod(claimsData.claims)) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return "/?error=auth_failed";
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return "/?error=auth_failed";
+  if (!user?.email || !user.email_confirmed_at) {
+    clearState();
+    return "/?error=auth_failed";
+  }
 
   const email = user.email.toLowerCase();
 
-  if (!isAllowedAccountEmail(email)) {
-    await supabase.auth.signOut();
+  if (!isAllowedAccount(user)) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
     return "/?error=domain";
   }
 
   // 어드민은 users 행을 만들지 않는다 (온보딩·카드가 필요 없고,
   // users_cju_domain CHECK 제약에도 걸리지 않아야 한다).
-  if (isAdminEmail(email)) return "/admin";
+  if (isAdminUser(user)) {
+    clearState();
+    if (process.env.ADMIN_REQUIRE_MFA?.trim().toLowerCase() !== "false" && claimsData.claims.aal !== "aal2") {
+      return "/auth/mfa";
+    }
+    return "/admin";
+  }
 
   const admin = createAdminClient();
 
@@ -36,14 +67,18 @@ export async function finishSignIn(): Promise<string> {
     .eq("email", email)
     .maybeSingle();
   if (ban) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
     return "/?error=banned";
   }
 
   const { error: upsertError } = await admin
     .from("users")
     .upsert({ id: user.id, email }, { onConflict: "id" });
-  if (upsertError) return "/?error=auth_failed";
+  if (upsertError) {
+    clearState();
+    return "/?error=auth_failed";
+  }
 
   const { data: prof } = await admin
     .from("users")
@@ -52,15 +87,20 @@ export async function finishSignIn(): Promise<string> {
     .single();
 
   if (prof?.banned) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
     return "/?error=banned";
   }
-  if (!prof?.gender) return "/onboarding";
+  if (!prof?.gender) {
+    clearState();
+    return "/onboarding";
+  }
 
   const { count } = await admin
     .from("cards")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
+  clearState();
   if (!count) return "/card/new";
 
   return "/board";

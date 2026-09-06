@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { AuthCaptcha } from "@/components/AuthCaptcha";
 
 function SentInner() {
   const params = useSearchParams();
@@ -11,6 +12,8 @@ function SentInner() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -21,11 +24,13 @@ function SentInner() {
   async function resend() {
     setResending(true);
     setError(null);
-    const res = await fetch("/api/auth/magic-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ email, captcha_token: captchaToken }),
     });
+    setCaptchaToken("");
+    setCaptchaKey((key) => key + 1);
     setResending(false);
     setCooldown(60);
     if (res.ok) {
@@ -38,6 +43,8 @@ function SentInner() {
     setError(
       data.error === "RATE_LIMITED"
         ? "너무 자주 요청했어요. 잠시 후 다시 시도해주세요"
+        : data.error === "CAPTCHA_REQUIRED"
+          ? "자동화 방지 인증을 완료해주세요"
         : "발송에 실패했어요. 잠시 후 다시 시도해주세요"
     );
   }
@@ -54,6 +61,10 @@ function SentInner() {
         <strong>15분 안에</strong> 클릭해주세요.
       </p>
       <p className="text-xs text-gray-500 mt-6">메일이 안 오면 스팸함도 확인해주세요</p>
+
+      <div className="mt-4">
+        <AuthCaptcha key={captchaKey} onToken={setCaptchaToken} />
+      </div>
 
       <Button
         variant="secondary"

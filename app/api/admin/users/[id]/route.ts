@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
+import { getAdminContext } from "@/lib/auth";
 
 // id는 email 또는 UUID (어드민 콘솔이 처음 lookup 시 email로 호출)
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  const { user } = await getAdminContext();
+  if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const { id } = await ctx.params;
   const decoded = decodeURIComponent(id);

@@ -37,7 +37,10 @@ export default function MyCardPage() {
     setSaving(true);
     await fetch("/api/cards/me", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({ one_liner: oneLiner, instagram_id: instaId, color }),
     });
     setSaving(false);
@@ -48,14 +51,21 @@ export default function MyCardPage() {
     setHidden(next);
     await fetch("/api/cards/me/toggle-hide", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({ hidden: next }),
     });
   }
 
   async function deleteAccount() {
     if (!confirm("정말로 계정과 모든 데이터를 삭제할까요? 되돌릴 수 없어요.")) return;
-    await fetch("/api/users/me", { method: "DELETE" });
+    const res = await fetch("/api/users/me", {
+      method: "DELETE",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!res.ok) return;
     router.push("/");
   }
 

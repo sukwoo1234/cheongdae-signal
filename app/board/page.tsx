@@ -73,7 +73,10 @@ export default function BoardPage() {
     setError(null);
     const res = await fetch("/api/matches", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({ card_id: pending.id }),
     });
     const data = await res.json().catch(() => ({}));
