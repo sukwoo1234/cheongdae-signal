@@ -1,7 +1,7 @@
-import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { finishSignIn } from "@/lib/auth-flow";
+import { isLoginEmailOtpType } from "@/lib/auth-email";
 
 /**
  * Supabase 이메일 템플릿이 `token_hash` 방식으로 설정된 경우의 복귀 지점.
@@ -13,12 +13,12 @@ export async function GET(req: Request) {
   const type = url.searchParams.get("type");
   const state = url.searchParams.get("state");
 
-  if (!token_hash || type !== "magiclink" || !state) {
+  if (!token_hash || !isLoginEmailOtpType(type) || !state) {
     redirect("/?error=invalid_link");
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ type: type as EmailOtpType, token_hash });
+  const { error } = await supabase.auth.verifyOtp({ type, token_hash });
   if (error) {
     redirect("/?error=verify_failed");
   }

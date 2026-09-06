@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import { isLoginEmailOtpType } from "@/lib/auth-email";
 
 /**
  * 매직링크 복귀 지점.
@@ -36,7 +36,7 @@ export default function AuthCallbackPage() {
       const accessToken = hash.get("access_token");
       const refreshToken = hash.get("refresh_token");
       const tokenHash = url.searchParams.get("token_hash");
-      const type = url.searchParams.get("type") as EmailOtpType | null;
+      const type = url.searchParams.get("type");
       const code = url.searchParams.get("code");
       const hashType = hash.get("type");
 
@@ -46,7 +46,7 @@ export default function AuthCallbackPage() {
         ok = false;
       } else if (errorDescription) {
         ok = false;
-      } else if ((type && type !== "magiclink") || (hashType && hashType !== "magiclink")) {
+      } else if ((type && !isLoginEmailOtpType(type)) || (hashType && !isLoginEmailOtpType(hashType))) {
         ok = false;
       } else if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
@@ -54,7 +54,7 @@ export default function AuthCallbackPage() {
           refresh_token: refreshToken,
         });
         ok = !error;
-      } else if (tokenHash && type) {
+      } else if (tokenHash && isLoginEmailOtpType(type)) {
         const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
         ok = !error;
       } else if (code) {
