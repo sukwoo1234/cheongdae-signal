@@ -12,6 +12,11 @@ export function CountdownBanner({ endsAt }: Props) {
     Math.max(0, Math.floor((new Date(endsAt).getTime() - Date.now()) / 1000))
   );
 
+  // 운영자가 종료 시각을 변경하면 이미 열린 화면의 카운트다운도 즉시 재동기화한다.
+  useEffect(() => {
+    setSecondsLeft(Math.max(0, Math.floor((new Date(endsAt).getTime() - Date.now()) / 1000)));
+  }, [endsAt]);
+
   useEffect(() => {
     const t = setInterval(() => {
       setSecondsLeft((s) => Math.max(0, s - 1));

@@ -301,6 +301,7 @@ docs/
 
 - 행사 시각·임계 인원은 어드민 콘솔 또는 `session_config` 테이블에서 설정한다
 - `force_locked = true`로 즉시 보드를 잠글 수 있다 (응급용)
+- 열린 보드는 5초마다 세션 상태만 다시 확인해 종료·강제 잠금을 자동 반영한다
 - 커스텀 SMTP를 쓸 경우 Supabase의 **Authentication → Rate Limits** 발송 한도도 함께 올려야 한다.
   기본값(시간당 30건)은 수백 명 규모에 부족하다
 - 배포된 Supabase에서도 **Confirm email을 켜고**, **CAPTCHA protection을 켜고**,

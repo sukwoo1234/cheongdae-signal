@@ -30,8 +30,24 @@ export default function BoardPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const router = useRouter();
 
+  const loadSession = useCallback(async () => {
+    const response = await fetch("/api/session");
+    if (!response.ok) {
+      setLoadFailed(true);
+      return false;
+    }
+
+    setSessionState((await response.json()) as SessionState);
+    setLoadFailed(false);
+    return true;
+  }, []);
+
   const loadAll = useCallback(async () => {
-    const sRes = await fetch("/api/session");
+    const [sRes, mc, mm] = await Promise.all([
+      fetch("/api/session"),
+      fetch("/api/cards/me").then((r) => (r.ok ? r.json() : { card: null })),
+      fetch("/api/matches/me").then((r) => (r.ok ? r.json() : { matches: [] })),
+    ]);
     if (!sRes.ok) {
       // 예전에는 에러 응답 객체를 그대로 state에 넣어서, 렌더 중
       // state.config.threshold_male 접근이 TypeError로 터졌다.
@@ -39,10 +55,6 @@ export default function BoardPage() {
       return;
     }
     const s: SessionState = await sRes.json();
-    const [mc, mm] = await Promise.all([
-      fetch("/api/cards/me").then((r) => (r.ok ? r.json() : { card: null })),
-      fetch("/api/matches/me").then((r) => (r.ok ? r.json() : { matches: [] })),
-    ]);
     setLoadFailed(false);
     setSessionState(s);
     setMyCard(mc.card ?? null);
@@ -53,15 +65,22 @@ export default function BoardPage() {
     loadAll();
   }, [loadAll]);
 
-  // 게이팅 중에는 5초마다 다시 확인해서 임계점이 채워지는 즉시 보드로 넘어간다.
-  // 예전에는 폴링이 자식 Gating 안에만 있어서 결과가 부모에 전달되지 않았고,
-  // "자동으로 새로고침돼요" 문구와 달리 수동 새로고침 전까지 넘어가지 않았다.
-  const boardOpen = sessionState?.board_open ?? false;
+  // 세션 상태는 보드가 열린 뒤에도 계속 바뀐다. 임계점 충족뿐 아니라 종료 시각과
+  // 관리자의 강제 잠금도 새로고침 없이 반영해야 한다. 카드·매칭까지 매번 읽으면
+  // 참가자가 많을 때 요청량이 커지므로 가벼운 /api/session만 폴링한다.
   useEffect(() => {
-    if (boardOpen) return;
-    const t = setInterval(loadAll, 5000);
-    return () => clearInterval(t);
-  }, [boardOpen, loadAll]);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadSession();
+    };
+    const t = setInterval(refreshWhenVisible, 5000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [loadSession]);
 
   useEffect(() => {
     if (sessionState?.in_postsession) router.replace("/end");
