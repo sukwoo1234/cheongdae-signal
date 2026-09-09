@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Postit } from "@/components/Postit";
+import { PetalCard } from "@/components/PetalCard";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampusShell } from "@/components/CampusShell";
 import { ONELINER_MAX_LENGTH, PostitColor } from "@/lib/constants";
 import type { MyCard } from "@/lib/types";
 
@@ -69,34 +70,39 @@ export default function MyCardPage() {
     router.push("/");
   }
 
-  if (!card) return <main className="flex min-h-screen items-center justify-center bg-[#f4f7fb] text-sm text-[#8390a2]">카드를 불러오는 중…</main>;
+  if (!card) return <main className="flex min-h-screen items-center justify-center bg-[#edf5ff] text-sm text-[#8390a2]">카드를 불러오는 중…</main>;
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb] px-5 py-8 sm:py-12">
-      <div className="signal-enter mx-auto max-w-md rounded-[28px] border border-[#dce4ee] bg-white p-6 shadow-[0_24px_70px_rgba(24,46,76,0.10)] sm:p-8">
+    <CampusShell className="min-h-[1250px] sm:min-h-screen">
+      <div className="mx-auto mt-4 max-w-md rounded-[30px] border border-white/90 bg-white/92 p-6 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:p-8">
         <div className="mb-6 flex items-start justify-between">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0ca18e]">Profile card</p><h1 className="mt-1 text-xl font-extrabold tracking-[-0.03em] text-[#071b33]">내 카드 관리</h1></div>
-          <Link href="/board" className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[#526176] hover:bg-[#f1f5f9]">보드로</Link>
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#27bfae]">Profile card</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.04em] text-[#0c2748]">내 카드 관리</h1></div>
+          <Link href="/board" className="rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#294665] shadow-sm ring-1 ring-[#dce4ee] hover:bg-[#f7f9fc]">보드로</Link>
         </div>
 
-        <div className="mb-6 flex justify-center rounded-2xl border border-dashed border-[#d8e1eb] bg-[#f8fafc] py-6">
-          <Postit text={oneLiner || "한 줄 소개"} color={color} size="md" rotation={-1} />
+        <div className="mb-7 flex justify-center rounded-[24px] border border-dashed border-[#ccdaea] bg-[linear-gradient(135deg,#f5f9ff,#fff6fa)] py-7">
+          <div className="relative">
+            <PetalCard text={oneLiner || "한 줄 소개"} color={color} size="lg" rotation={-2} />
+            <span aria-hidden className="absolute -right-3 top-3 h-1.5 w-5 rotate-[62deg] rounded-full bg-[#f08bab]" />
+            <span aria-hidden className="absolute -right-5 top-8 h-1.5 w-5 rotate-[12deg] rounded-full bg-[#f08bab]" />
+          </div>
         </div>
 
-        <label className="mb-1.5 block text-xs font-semibold text-[#34445a]">한 줄 소개</label>
+        <label className="mb-2 block text-sm font-bold text-[#183654]">✎ &nbsp;한 줄 소개</label>
         <Input
+          className="h-14 text-base"
           value={oneLiner}
           onChange={(e) => {
             const v = e.target.value;
             if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
           }}
         />
-        <label className="mb-1.5 mt-4 block text-xs font-semibold text-[#34445a]">인스타그램 ID</label>
-        <Input value={instaId} onChange={(e) => setInstaId(e.target.value)} />
-        <label className="mb-2 mt-4 block text-xs font-semibold text-[#34445a]">카드 색상</label>
+        <label className="mb-2 mt-5 block text-sm font-bold text-[#183654]">♙ &nbsp;인스타그램 ID</label>
+        <Input className="h-14 text-base" value={instaId} onChange={(e) => setInstaId(e.target.value)} />
+        <label className="mb-3 mt-5 block text-sm font-bold text-[#183654]">◉ &nbsp;카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 
-        <Button onClick={save} disabled={saving} className="w-full mt-4">
+        <Button onClick={save} disabled={saving} className="mt-6 h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#0b2b4c,#00213e)] text-base">
           {saving ? "저장 중..." : "저장"}
         </Button>
 
@@ -104,7 +110,7 @@ export default function MyCardPage() {
 
         <button
           onClick={toggleHide}
-          className={`min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-semibold transition ${hidden ? "border-[#9cddd4] bg-[#eefaf8] text-[#0b8f7e]" : "border-[#f0c7cd] bg-[#fff7f8] text-[#bd3344]"}`}
+          className={`min-h-13 w-full rounded-2xl border-2 px-3 py-3 text-sm font-bold transition ${hidden ? "border-[#9cddd4] bg-[#eefaf8] text-[#0b8f7e]" : "border-[#ffb8c5] bg-[#fffafb] text-[#e63d58]"}`}
         >
           {hidden ? "다시 보드에 올리기" : "카드 내리기 (킬 스위치)"}
         </button>
@@ -114,10 +120,10 @@ export default function MyCardPage() {
 
         <div className="my-7 border-t border-[#e5ebf2]"></div>
 
-        <button onClick={deleteAccount} className="w-full text-xs font-semibold text-[#bd3344] underline decoration-[#e8aeb7] underline-offset-4">
+        <button onClick={deleteAccount} className="w-full text-sm font-bold text-[#d92d49] underline decoration-[#e8aeb7] underline-offset-4">
           계정과 카드 정보 삭제
         </button>
       </div>
-    </main>
+    </CampusShell>
   );
 }
