@@ -49,7 +49,21 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0015_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0016_'));
+const purgeDefinition = (await db.query(
+  "select pg_get_functiondef('public.purge_current_event_data()'::regprocedure) as definition",
+)).rows[0].definition.toLowerCase();
+secured(
+  'every event-purge delete has an explicit predicate for safeupdate deployments',
+  [
+    'delete from public.matches where id is not null',
+    'delete from public.cards where id is not null',
+    'delete from public.users where id is not null',
+    'delete from public.banned_emails where email is not null',
+    'delete from public.magic_link_throttle where key_hash is not null',
+    'where event_id is not null and subject_key is not null',
+  ].every((statement) => purgeDefinition.includes(statement)),
+);
 
 const A = '10000000-0000-4000-8000-000000000001';
 const A2 = '10000000-0000-4000-8000-000000000006';
