@@ -77,13 +77,16 @@ export default function Landing() {
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder="학번@cju.ac.kr"
+              placeholder="학교 이메일"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-14 border-white bg-white/90 pl-12 text-base shadow-sm"
               required
             />
           </div>
+          <p className="mt-2 px-1 text-[11px] font-medium text-[#687d99]">
+            청주대학교 이메일(@cju.ac.kr)을 입력해주세요.
+          </p>
           <div className="mt-3 overflow-hidden rounded-xl"><AuthCaptcha key={captchaKey} onToken={setCaptchaToken} /></div>
           <Button type="submit" disabled={loading || !email} className="mt-3 h-14 w-full bg-gradient-to-r from-[#3169b5] via-[#7467dc] to-[#d85dac] text-base shadow-[0_12px_28px_rgba(93,94,201,.28)] hover:brightness-105">
             {loading ? "로그인 링크 보내는 중…" : "매직링크 받기  →"}

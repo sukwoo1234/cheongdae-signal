@@ -149,9 +149,13 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb]">
+    <main
+      className="relative min-h-screen bg-[#edf5ff] bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: "url('/hero-campus.webp')" }}
+    >
+      <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(180deg,rgba(237,246,255,.72),rgba(255,255,255,.88)_45%,rgba(255,247,249,.68))]" />
       <CountdownBanner endsAt={sessionState.config.ends_at} />
-      <header className="sticky top-0 z-10 border-b border-[#dce4ee] bg-white/90 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 border-b border-white/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/board" className="hidden items-center gap-2 text-xs font-extrabold text-[#071b33] sm:flex"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#071b33] text-[10px] text-white">S</span>청대 시그널</Link>
@@ -164,11 +168,13 @@ export default function BoardPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
-        <div className="mb-5 px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0ca18e]">Live board</p>
-          <h1 className="mt-1 text-xl font-extrabold tracking-[-0.03em] text-[#071b33]">딱 한 장, 마음 가는 카드를 골라보세요.</h1>
-          <p className="mt-1 text-xs text-[#8390a2]">카드를 열면 선택 기회가 사용되고 상대의 인스타그램 ID가 공개됩니다.</p>
+      <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
+        <div className="mb-4 px-1 text-center sm:text-left">
+          <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대의 인스타그램 ID가 공개됩니다.</p>
+          <h1 className="mt-7 text-3xl font-semibold leading-snug tracking-[-0.045em] text-[#4e6f9b] sm:text-4xl" style={{ fontFamily: "'Segoe Print', 'Apple SD Gothic Neo', sans-serif" }}>
+            좋은 인연이<br className="sm:hidden" /> 기다리고 있어요 ♡
+          </h1>
+          <p className="mt-2 text-[9px] font-semibold tracking-[0.28em] text-[#7187a7]">CHEONGJU UNIVERSITY</p>
         </div>
         <BoardGrid
           reloadKey={reloadKey}

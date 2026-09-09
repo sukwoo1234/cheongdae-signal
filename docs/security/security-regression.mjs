@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0014_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0015_'));
 
 const A = '10000000-0000-4000-8000-000000000001';
 const A2 = '10000000-0000-4000-8000-000000000006';
@@ -97,9 +97,33 @@ await register(eventId, A, 'a@cju.ac.kr', subjectA);
 await register(eventId, B, 'b@cju.ac.kr', subjectB);
 await register(eventId, C, 'c@cju.ac.kr', subjectC);
 await register(eventId, D, 'd@cju.ac.kr', subjectD);
+
+await identity(A, 'a@cju.ac.kr');
+await db.query('select public.complete_onboarding($1,$2,$3)', ['M', true, true]);
+await owner();
+const onboardedA = (await db.query(
+  'select gender, terms_accepted_at, privacy_accepted_at from public.users where id=$1',
+  [A],
+)).rows[0];
+secured(
+  'an authenticated magic-link participant can complete onboarding once',
+  onboardedA.gender === 'M' && onboardedA.terms_accepted_at && onboardedA.privacy_accepted_at,
+);
+await identity(A, 'a@cju.ac.kr');
+await db.query('select public.complete_onboarding($1,$2,$3)', ['M', true, true]);
+secured(
+  'the same onboarding choice is idempotent after a lost response',
+  (await db.query('select gender from public.users where id=$1', [A])).rows[0].gender === 'M',
+);
+await identity(A, 'a@cju.ac.kr');
+await expectDbError(
+  'onboarding cannot be replayed to change an immutable gender',
+  () => db.query('select public.complete_onboarding($1,$2,$3)', ['F', true, true]),
+  'GENDER_ALREADY_SET',
+);
 await owner();
 await db.exec(`
-  update public.users set gender='M' where id in ('${A}','${C}');
+  update public.users set gender='M' where id='${C}';
   update public.users set gender='F' where id in ('${B}','${D}');
   insert into public.cards(id,user_id,one_liner,instagram_id,color) values
     ('${cardA}','${A}','A','fixture_a','yellow'),

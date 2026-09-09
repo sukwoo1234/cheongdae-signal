@@ -19,18 +19,36 @@ export default function Onboarding() {
   async function submit() {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/users/onboard", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({ gender, terms, privacy }),
-    });
-    if (res.ok) {
-      router.push("/card/new");
-    } else {
-      setError("저장 실패. 다시 시도해주세요.");
+    try {
+      const res = await fetch("/api/users/onboard", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ gender, terms, privacy }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        router.replace("/card/new");
+        return;
+      }
+
+      const messages: Record<string, string> = {
+        INVALID_GENDER: "성별을 다시 선택해주세요.",
+        TERMS_REQUIRED: "필수 약관에 모두 동의해주세요.",
+        GENDER_ALREADY_SET: "이미 다른 성별로 등록되어 있어요. 다시 로그인해주세요.",
+        UNAUTHENTICATED: "로그인 연결이 만료됐어요. 첫 화면에서 다시 로그인해주세요.",
+        SESSION_INVALID: "로그인 연결이 만료됐어요. 첫 화면에서 다시 로그인해주세요.",
+        DOMAIN_NOT_ALLOWED: "청주대학교 이메일 계정만 참여할 수 있어요.",
+        BANNED: "이용이 제한된 계정이에요.",
+        CSRF_FAILED: "페이지 연결이 만료됐어요. 새로고침 후 다시 시도해주세요.",
+        DB_ERROR: "저장 중 일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
+      };
+      setError(messages[data.error] ?? "저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch {
+      setError("네트워크 연결이 불안정해요. 연결을 확인하고 다시 시도해주세요.");
+    } finally {
       setLoading(false);
     }
   }

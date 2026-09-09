@@ -33,6 +33,13 @@ export async function POST(req: Request) {
     if (error.message.includes("CONSENT_REQUIRED")) {
       return NextResponse.json({ error: "TERMS_REQUIRED" }, { status: 400 });
     }
+    if (error.message.includes("ACCOUNT_NOT_ALLOWED")) {
+      console.warn("[onboarding] rejected inactive session", { code: error.code ?? "UNKNOWN" });
+      return NextResponse.json({ error: "SESSION_INVALID" }, { status: 401 });
+    }
+    // DB 세부 메시지나 사용자 식별자는 응답에 노출하지 않는다. 운영 로그에는
+    // Supabase 오류 코드만 남겨 재발 시 원인을 추적할 수 있게 한다.
+    console.error("[onboarding] RPC failed", { code: error.code ?? "UNKNOWN" });
     return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
   return NextResponse.json({ ok: true });

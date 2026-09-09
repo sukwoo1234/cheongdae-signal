@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Postit } from "@/components/Postit";
+import { PetalCard } from "@/components/PetalCard";
 import { PostitColor } from "@/lib/constants";
 
 interface Props {
@@ -23,7 +23,7 @@ export function RevealModal({ card, instagramId, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#071b33]/55 px-4 backdrop-blur-sm sm:items-center">
       <div className="w-full max-w-sm rounded-t-[28px] bg-white p-6 text-center shadow-2xl sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center mb-3">
-          <Postit text={card.one_liner} color={card.color} size="sm" rotation={1} />
+          <PetalCard text={card.one_liner} color={card.color} size="sm" rotation={1} />
         </div>
         <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">Instagram</div>
         <div className="mb-4 flex items-center justify-center gap-2 rounded-2xl bg-[#f1f5f9] px-3 py-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Postit } from "@/components/Postit";
+import { PetalCard } from "@/components/PetalCard";
 import { PostitColor } from "@/lib/constants";
 
 interface BoardCard {
@@ -36,10 +36,13 @@ export function BoardGrid({ onCardClick, reloadKey }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-7 rounded-[24px] border border-[#e0e7ef] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8fb_75%)] px-3 py-8 sm:grid-cols-3 sm:px-6 md:grid-cols-4 lg:grid-cols-5">
-      {cards.map((c) => (
-        <div key={c.id} className="flex justify-center">
-          <Postit text={c.one_liner} color={c.color} size="md" onClick={() => onCardClick(c)} />
+    <div className="grid grid-cols-2 gap-x-0 gap-y-3 overflow-hidden px-0 py-8 sm:grid-cols-3 sm:gap-x-3 sm:px-5 md:grid-cols-4 lg:grid-cols-5">
+      {cards.map((c, index) => (
+        <div
+          key={c.id}
+          className={`flex justify-center ${index % 4 === 0 || index % 4 === 3 ? "translate-y-5" : "-translate-y-1"}`}
+        >
+          <PetalCard text={c.one_liner} color={c.color} size="md" onClick={() => onCardClick(c)} />
         </div>
       ))}
     </div>
