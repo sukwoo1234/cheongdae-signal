@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
 import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
 import { requireAjaxRequest } from "@/lib/csrf";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
   const { supabase, user, denial } = await getActiveUser();
@@ -20,9 +21,10 @@ export async function GET() {
 export async function PATCH(req: Request) {
   const csrfError = requireAjaxRequest(req);
   if (csrfError) return csrfError;
-  const { supabase, user, denial } = await getActiveUser();
+  const { user, profile, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
+  if (!profile?.gender) return NextResponse.json({ error: "ONBOARDING_INCOMPLETE" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const updates: Record<string, unknown> = {};
@@ -52,7 +54,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "NO_CHANGES" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("cards").update(updates).eq("user_id", user.id);
+  const { error } = await createAdminClient().from("cards").update(updates).eq("user_id", user.id);
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

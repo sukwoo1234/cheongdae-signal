@@ -47,7 +47,7 @@
 
 이 서비스의 가치는 전부 하나의 불변식에서 나온다.
 
-> **한 사람은 평생 딱 한 명의 인스타그램 ID만 볼 수 있다.**
+> **한 사람은 한 행사에서 기본적으로 딱 한 명의 인스타그램 ID만 볼 수 있다.**
 
 이게 깨지면 서비스는 "인스타 ID 수집기"가 된다. 그래서 설계의 대부분이 이 불변식을 지키는 데 쓰였다.
 
@@ -219,7 +219,8 @@ $ node --env-file=.env.local scripts/verify-security.mjs
 실제 학생의 이메일·성별·인스타그램 ID를 다루므로 개인정보보호법이 적용된다.
 
 - 수집 항목을 최소화하고, **행사 종료 후 7일 이내 전량 파기**
-- 사용자가 앱 내에서 언제든 즉시 삭제 가능 (`auth.users`까지 삭제)
+- 사용자가 앱 내에서 계정·카드·매칭 상세정보를 즉시 삭제 가능 (`auth.users` 포함)
+- 동일 행사 중복 이용 방지용 가명 원장만 행사 폐기 시점까지 분리 보관 후 삭제
 - 처리방침에 보호책임자·국외 이전·파기 절차·권익침해 구제방법 명시 (`/privacy`)
 - 인스타그램 ID는 슬롯을 사용해 열람한 1인에게만 공개
 
@@ -289,6 +290,7 @@ supabase/migrations/
   0010            관리자 UUID·동의·스케줄러 권한 보강
   0011            매직링크 인증 방식 DB 경계
   0012            throttle 행 보존기간 정리
+  0013            행사별 가명 이용 원장 · DB 접근 경계 · 안전한 폐기
 scripts/
   verify-security.mjs   PostgREST 직접 호출 기반 인가 검증
 docs/
@@ -311,9 +313,12 @@ docs/
 - 배포된 Supabase에서도 **Confirm email을 켜고**, **CAPTCHA protection을 켜고**,
   세션 timebox/inactivity timeout을 각각 `48h`/`8h`로 설정한다. `config.toml`은
   로컬 설정이므로 hosted 프로젝트에는 Dashboard에서 별도로 반영해야 한다.
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`를 설정하고 Supabase CAPTCHA provider에 같은
-  Turnstile secret을 등록한다. production에서는 토큰 없는 매직링크 발송을 거부한다.
-- `supabase db push` 전에 staging에서 `0010`~`0012` 마이그레이션을 적용하고,
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`와 서버 전용 `TURNSTILE_SECRET_KEY`를 설정하고,
+  Supabase CAPTCHA provider에도 같은 Turnstile secret을 등록한다. 앱 서버는
+  Siteverify 성공 후에만 매직링크를 발송한다.
+- `EVENT_IDENTITY_HMAC_KEY`에는 32자 이상의 별도 랜덤 값을 설정한다. 행사 도중
+  바꾸면 재가입 식별이 끊기므로 키 교체는 데이터 폐기 직후에만 한다.
+- `supabase db push` 전에 staging에서 `0010`~`0013` 마이그레이션을 적용하고,
   `ADMIN_USER_ID`가 실제 Auth UUID인지 확인한다. `ADMIN_REQUIRE_MFA=true`인
   상태에서 관리자 TOTP factor가 verified인지도 확인한다.
 - 데이터 폐기는 자동화하지 않았다. 어드민이 명시적으로 실행한다

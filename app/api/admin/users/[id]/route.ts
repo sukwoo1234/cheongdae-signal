@@ -22,15 +22,22 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     .select("id, bonus, viewed_card_id, cards!inner(one_liner)")
     .eq("viewer_user_id", u.id);
 
-  const slotUsed = (m ?? []).some((x) => !x.bonus);
-  const lastViewed = (m ?? []).find((x) => !x.bonus);
+  const { data: slotRows, error: slotError } = await admin.rpc("admin_event_participant_state", {
+    p_user_id: u.id,
+  });
+  if (slotError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  const slot = Array.isArray(slotRows) ? slotRows[0] : slotRows;
+  const lastViewed = (m ?? [])[0];
 
   return NextResponse.json({
     id: u.id,
     email: u.email,
     gender: u.gender,
     banned: u.banned,
-    slot_used: slotUsed,
+    slot_used: (slot?.used ?? 0) > 0,
+    allowance: slot?.allowance ?? 0,
+    used: slot?.used ?? 0,
+    remaining: slot?.remaining ?? 0,
     viewed_card_oneliner: lastViewed ? (lastViewed.cards as unknown as { one_liner: string }).one_liner : null,
   });
 }

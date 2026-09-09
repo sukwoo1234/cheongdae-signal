@@ -6,6 +6,7 @@ export async function POST(req: Request) {
   const csrfError = requireAjaxRequest(req);
   if (csrfError) return csrfError;
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) return NextResponse.json({ error: "LOGOUT_FAILED" }, { status: 502 });
   return NextResponse.json({ ok: true });
 }

@@ -26,6 +26,7 @@ export default function Privacy() {
         <p className="mb-2 font-semibold text-gray-800">서비스 이용 과정에서 자동 생성·수집되는 정보</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>접속 IP 주소, 접속 일시, 서비스 이용 기록(카드 열람 이력)</li>
+          <li>동일 행사 내 중복 이용 방지를 위한 행사별 가명 식별값과 선택 기회 사용 횟수</li>
           <li>인증 및 세션 유지를 위한 쿠키</li>
         </ul>
         <p className="mt-2 text-xs text-gray-500">
@@ -51,7 +52,10 @@ export default function Privacy() {
           보유합니다. 폐기는 <strong>행사 종료 후 7일 이내</strong>에 실행하는 것을 원칙으로 합니다.
         </p>
         <p className="mt-2">
-          이용자가 서비스 내에서 직접 삭제를 요청한 경우에는 즉시 파기합니다.
+          이용자가 서비스 내에서 직접 삭제를 요청하면 계정, 이메일, 카드, 인스타그램 ID와
+          매칭 상세정보는 즉시 파기합니다. 다만 동일 행사 내 탈퇴·재가입을 이용한 중복 열람을
+          방지하기 위해 이메일 원문을 저장하지 않는 행사별 가명 식별값과 선택 기회 사용·공개
+          횟수는 해당 행사 데이터 폐기 시점까지만 분리 보관한 뒤 함께 파기합니다.
         </p>
       </section>
 
@@ -137,8 +141,8 @@ export default function Privacy() {
             <strong>열람·정정</strong>: 로그인 후 &quot;내 카드&quot; 페이지에서 직접 확인·수정
           </li>
           <li>
-            <strong>삭제</strong>: &quot;내 카드&quot; 페이지의 &quot;계정과 모든 데이터 즉시 삭제&quot;
-            버튼으로 즉시 파기
+            <strong>삭제</strong>: &quot;내 카드&quot; 페이지의 삭제 버튼으로 계정·카드·인스타그램 ID와
+            매칭 상세정보를 즉시 파기. 행사별 중복 이용 방지 기록은 3항의 기간 후 파기
           </li>
           <li>
             <strong>그 밖의 요구</strong>: 아래 9항의 연락처로 요청 (지체 없이 조치)

@@ -60,7 +60,7 @@ export default function MyCardPage() {
   }
 
   async function deleteAccount() {
-    if (!confirm("정말로 계정과 모든 데이터를 삭제할까요? 되돌릴 수 없어요.")) return;
+    if (!confirm("계정·카드·매칭 정보를 삭제할까요? 행사 내 중복 이용 방지 기록은 행사 폐기 시 함께 삭제됩니다.")) return;
     const res = await fetch("/api/users/me", {
       method: "DELETE",
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -115,7 +115,7 @@ export default function MyCardPage() {
         <div className="my-7 border-t border-[#e5ebf2]"></div>
 
         <button onClick={deleteAccount} className="w-full text-xs font-semibold text-[#bd3344] underline decoration-[#e8aeb7] underline-offset-4">
-          계정과 모든 데이터 즉시 삭제
+          계정과 카드 정보 삭제
         </button>
       </div>
     </main>

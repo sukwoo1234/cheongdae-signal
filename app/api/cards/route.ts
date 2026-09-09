@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
 import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
 import { requireAjaxRequest } from "@/lib/csrf";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   const csrfError = requireAjaxRequest(req);
   if (csrfError) return csrfError;
-  const { supabase, user, denial } = await getActiveUser();
+  const { user, profile, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
+  if (!profile?.gender) return NextResponse.json({ error: "ONBOARDING_INCOMPLETE" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
 
@@ -21,7 +23,9 @@ export async function POST(req: Request) {
   const color = validateColor(body.color);
   if (color.error) return NextResponse.json({ error: color.error }, { status: 400 });
 
-  const { error, data } = await supabase
+  // authenticated 역할의 직접 쓰기 권한은 회수한다. 검증을 통과한 서버만
+  // service_role로 쓰며 user_id는 요청 body가 아닌 검증된 세션에서 고정한다.
+  const { error, data } = await createAdminClient()
     .from("cards")
     .insert({
       user_id: user.id,

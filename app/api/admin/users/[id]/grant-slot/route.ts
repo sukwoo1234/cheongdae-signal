@@ -19,12 +19,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (targetError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-  // 기존 슬롯 사용을 bonus로 변환 → 새 1회 사용 가능
-  const { error } = await admin
-    .from("matches")
-    .update({ bonus: true })
-    .eq("viewer_user_id", id)
-    .eq("bonus", false);
+  // 사용 기록은 보존하고 allowance만 늘린다. 남은 기회가 이미 있으면
+  // 재전송/연속 클릭으로 중복 지급하지 않는다.
+  const { error } = await admin.rpc("grant_event_slot", { p_user_id: id });
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

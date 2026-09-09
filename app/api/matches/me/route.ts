@@ -6,7 +6,11 @@ export async function GET() {
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
-  const { data, error } = await supabase.rpc("my_matches");
-  if (error) return NextResponse.json({ error: "RPC_ERROR" }, { status: 500 });
-  return NextResponse.json({ matches: data ?? [] });
+  const [{ data, error }, { data: slotRows, error: slotError }] = await Promise.all([
+    supabase.rpc("my_matches"),
+    supabase.rpc("my_slot_state"),
+  ]);
+  if (error || slotError) return NextResponse.json({ error: "RPC_ERROR" }, { status: 500 });
+  const slot = Array.isArray(slotRows) ? (slotRows[0] ?? null) : (slotRows ?? null);
+  return NextResponse.json({ matches: data ?? [], slot });
 }

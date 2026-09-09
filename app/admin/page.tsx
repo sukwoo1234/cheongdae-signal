@@ -26,6 +26,9 @@ interface UserInfo {
   gender: string | null;
   banned: boolean;
   slot_used: boolean;
+  allowance: number;
+  used: number;
+  remaining: number;
   viewed_card_oneliner: string | null;
 }
 
@@ -55,7 +58,7 @@ function draftFromConfig(config: SessionConfig): SessionDraft {
     endsAt: toLocalInput(config.ends_at),
     thresholdMale: config.threshold_male,
     thresholdFemale: config.threshold_female,
-    maxViews: config.max_views_per_card?.toString() ?? "",
+    maxViews: config.max_views_per_card.toString(),
   };
 }
 
@@ -118,13 +121,13 @@ export default function AdminConsole() {
 
   async function saveConfig() {
     if (!draft) return;
-    const maxViews = draft.maxViews.trim() === "" ? null : Number(draft.maxViews);
-    if (!Number.isInteger(maxViews) && maxViews !== null) {
+    const maxViews = Number(draft.maxViews);
+    if (!Number.isInteger(maxViews)) {
       setSaveState("error");
       setSaveMessage("카드 열람 상한은 1 이상의 정수로 입력해주세요.");
       return;
     }
-    if (maxViews !== null && maxViews < 1) {
+    if (maxViews < 1) {
       setSaveState("error");
       setSaveMessage("카드 열람 상한은 1 이상이어야 합니다.");
       return;
@@ -354,10 +357,10 @@ export default function AdminConsole() {
                     min={1}
                     value={draft.maxViews}
                     onChange={(event) => setDraft({ ...draft, maxViews: event.target.value })}
-                    placeholder="무제한"
+                    placeholder="1"
                     className="h-10 w-full rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-xs text-[#e8e8ec] outline-none transition placeholder:text-[#55555e] focus:border-[#7c6ff0] focus:ring-2 focus:ring-[#7c6ff0]/15"
                   />
-                  <span className="mt-1.5 block text-[9px] leading-4 text-[#666670]">비워두면 제한하지 않습니다.</span>
+                  <span className="mt-1.5 block text-[9px] leading-4 text-[#666670]">개인정보 공개 인원 상한입니다. 기본값은 1명입니다.</span>
                 </label>
               </div>
 
@@ -445,7 +448,7 @@ export default function AdminConsole() {
               {userInfo && (
                 <div className="mt-4 rounded-lg border border-white/[0.07] bg-[#0c0d10] p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{userInfo.email}</p><p className="mt-1 text-[9px] text-[#666670]">{userInfo.gender ?? "미설정"} · 선택 기회 {userInfo.slot_used ? "사용함" : "사용 가능"}</p></div>
+                    <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{userInfo.email}</p><p className="mt-1 text-[9px] text-[#666670]">{userInfo.gender ?? "미설정"} · 선택 기회 {userInfo.remaining}회 남음 ({userInfo.used}/{userInfo.allowance} 사용)</p></div>
                     <span className={`rounded px-1.5 py-0.5 text-[8px] font-medium ${userInfo.banned ? "bg-[#35191f] text-[#ff7185]" : "bg-[#183029] text-[#58c9ad]"}`}>{userInfo.banned ? "차단됨" : "정상"}</span>
                   </div>
                   <div className="mt-3 rounded-md bg-white/[0.035] px-3 py-2 text-[9px] text-[#85858f]">열람 카드 · {userInfo.viewed_card_oneliner ?? "없음"}</div>

@@ -47,7 +47,7 @@ export default function BoardPage() {
     const [sRes, mc, mm] = await Promise.all([
       fetch("/api/session"),
       fetch("/api/cards/me").then((r) => (r.ok ? r.json() : { card: null })),
-      fetch("/api/matches/me").then((r) => (r.ok ? r.json() : { matches: [] })),
+      fetch("/api/matches/me").then((r) => (r.ok ? r.json() : { matches: [], slot: null })),
     ]);
     if (!sRes.ok) {
       // 예전에는 에러 응답 객체를 그대로 state에 넣어서, 렌더 중
@@ -59,7 +59,7 @@ export default function BoardPage() {
     setLoadFailed(false);
     setSessionState(s);
     setMyCard(mc.card ?? null);
-    setHasUsedSlot(((mm.matches ?? []) as MyMatch[]).filter((m) => !m.bonus).length > 0);
+    setHasUsedSlot(mm.slot ? mm.slot.remaining <= 0 : ((mm.matches ?? []) as MyMatch[]).length > 0);
   }, []);
 
   useEffect(() => {

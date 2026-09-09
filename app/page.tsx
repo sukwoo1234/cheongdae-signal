@@ -35,6 +35,7 @@ export default function Landing() {
         RATE_LIMITED: "너무 자주 요청했어요. 1분 뒤에 다시 시도해주세요",
         SEND_FAILED: "메일 발송 실패. 잠시 후 다시 시도해주세요",
         CAPTCHA_REQUIRED: "자동화 방지 인증을 완료해주세요",
+        CAPTCHA_FAILED: "자동화 방지 인증이 만료됐어요. 다시 확인해주세요",
       };
       setError(msgs[data.error] || "오류가 발생했어요");
       setLoading(false);

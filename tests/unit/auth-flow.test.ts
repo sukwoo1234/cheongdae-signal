@@ -30,22 +30,40 @@ describe("finishSignIn runtime boundary", () => {
       },
     });
 
-    const query = {
-      select: vi.fn(),
-      eq: vi.fn(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      single: vi.fn().mockResolvedValue({ data: { gender: null, banned: false }, error: null }),
+    const chain = (result: Record<string, unknown>) => {
+      const query = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        maybeSingle: vi.fn().mockResolvedValue(result),
+        single: vi.fn().mockResolvedValue(result),
+      };
+      query.select.mockReturnValue(query);
+      query.eq.mockReturnValue(query);
+      return query;
     };
-    query.select.mockReturnValue(query);
-    query.eq.mockReturnValue(query);
-    mocks.createAdminClient.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    const bannedEmails = chain({ data: null, error: null });
+    const sessionConfig = chain({
+      data: { event_id: "00000000-0000-4000-8000-000000000099", purging: false },
+      error: null,
+    });
+    const users = chain({ data: { gender: null, banned: false }, error: null });
+    const cards = chain({ data: null, count: 0, error: null });
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) => ({
+        banned_emails: bannedEmails,
+        session_config: sessionConfig,
+        users,
+        cards,
+      })[table]),
+      rpc: vi.fn().mockResolvedValue({ error: null }),
+    });
 
     return { signOut };
   }
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv("EVENT_IDENTITY_HMAC_KEY", "audit-event-identity-key-with-at-least-32-characters");
 
     const state = "a".repeat(43);
     mocks.cookies.mockResolvedValue({

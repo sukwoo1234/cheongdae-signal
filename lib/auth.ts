@@ -125,13 +125,20 @@ export async function getActiveUser() {
     return { supabase, user: null, profile: null, denial: "DOMAIN_NOT_ALLOWED" as const };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("id, gender, banned")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.banned) {
+  // 프로필/RLS 조회가 실패했는데도 사용자를 활성 상태로 취급하면 DB 장애나
+  // 행사 원장 누락이 인가 우회로 바뀐다. 여기서는 항상 fail closed 한다.
+  if (profileError || !profile) {
+    await supabase.auth.signOut().catch(() => {});
+    return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
+  }
+
+  if (profile.banned) {
     await supabase.auth.signOut();
     return { supabase, user: null, profile: null, denial: "BANNED" as const };
   }

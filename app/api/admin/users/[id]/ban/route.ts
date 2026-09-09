@@ -11,31 +11,22 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { id } = await ctx.params;
   const admin = createAdminClient();
-  const { data: u } = await admin.from("users").select("email").eq("id", id).single();
+  const { data: u, error: userError } = await admin.from("users").select("id").eq("id", id).single();
+  if (userError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   if (!u) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-  const { error: banUserError } = await admin
-    .from("users")
-    .update({ banned: true, banned_reason: "admin_ban" })
-    .eq("id", id);
-  if (banUserError) return NextResponse.json({ error: "BAN_FAILED" }, { status: 500 });
+  // 원장 차단·프로필 차단·이메일 차단·카드 숨김을 DB 트랜잭션 하나로 처리한다.
+  const { error: ledgerBanError } = await admin.rpc("ban_event_participant", {
+    p_user_id: id,
+    p_reason: "admin_ban",
+  });
+  if (ledgerBanError) return NextResponse.json({ error: "BAN_FAILED" }, { status: 500 });
 
-  const { error: banEmailError } = await admin
-    .from("banned_emails")
-    .upsert({ email: u.email, reason: "admin_ban" });
-  if (banEmailError) return NextResponse.json({ error: "BAN_FAILED" }, { status: 500 });
-
-  // 카드는 물리 삭제하지 않는다. matches.viewed_card_id가 on delete cascade라
-  // 카드를 지우면 "그 카드를 본 사람들"의 매칭 기록까지 사라지고,
-  // 부분 유니크 인덱스 점유가 풀려 그들의 슬롯이 되살아난다.
-  const { error: hideError } = await admin
-    .from("cards")
-    .update({ hidden_by_admin: true })
-    .eq("user_id", id);
-  if (hideError) return NextResponse.json({ error: "BAN_FAILED" }, { status: 500 });
-
-  // 플래그만 세우면 이미 로그인해 있는 브라우저는 그대로 활동한다.
-  // refresh token까지 전역 폐기해야 실제로 차단된다.
-  await admin.auth.admin.signOut(id, "global").catch(() => {});
+  // admin.signOut은 UUID가 아니라 사용자 JWT를 요구한다. 계정 자체를 Auth에서
+  // ban하고, 이미 발급된 access token은 DB의 banned 검사로 즉시 거부한다.
+  const { error: authBanError } = await admin.auth.admin.updateUserById(id, {
+    ban_duration: "876000h",
+  });
+  if (authBanError) return NextResponse.json({ error: "AUTH_BAN_FAILED" }, { status: 502 });
 
   return NextResponse.json({ ok: true });
 }

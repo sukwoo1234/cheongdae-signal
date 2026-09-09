@@ -54,8 +54,7 @@ export async function PATCH(req: Request) {
         break;
 
       case "max_views_per_card":
-        // null = 무제한
-        if (v !== null && (!Number.isInteger(v) || (v as number) < 1)) {
+        if (!Number.isInteger(v) || (v as number) < 1) {
           return NextResponse.json({ error: "INVALID_MAX_VIEWS" }, { status: 400 });
         }
         updates[key] = v;
@@ -75,6 +74,15 @@ export async function PATCH(req: Request) {
   }
 
   const admin = createAdminClient();
+
+  const { data: lifecycle } = await admin
+    .from("session_config")
+    .select("purging")
+    .eq("id", 1)
+    .single();
+  if (lifecycle?.purging) {
+    return NextResponse.json({ error: "PURGE_IN_PROGRESS" }, { status: 409 });
+  }
 
   // 시각은 둘 중 하나만 바뀌어도 순서가 뒤집힐 수 있으므로 현재 값과 합쳐서 검증한다.
   if (updates.starts_at || updates.ends_at) {

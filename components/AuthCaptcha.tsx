@@ -11,6 +11,7 @@ type TurnstileWidget = {
       callback: (token: string) => void;
       "expired-callback": () => void;
       "error-callback": () => void;
+      action: string;
     }
   ) => string;
   remove?: (widgetId: string) => void;
@@ -33,6 +34,7 @@ export function AuthCaptcha({ onToken }: { onToken: (token: string) => void }) {
     if (!siteKey || !containerRef.current || !window.turnstile || widgetIdRef.current) return;
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
+      action: "magic_link",
       callback: (token) => callbackRef.current(token),
       "expired-callback": () => callbackRef.current(""),
       "error-callback": () => callbackRef.current(""),

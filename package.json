@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:security-db": "node docs/security/security-regression.mjs",
     "test:watch": "vitest",
     "supabase:link": "supabase link",
     "supabase:push": "supabase db push"
@@ -23,6 +24,7 @@
     "sharp": "^0.35.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",

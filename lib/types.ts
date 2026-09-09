@@ -62,13 +62,21 @@ export interface MyMatch {
 
 export interface SessionConfig {
   id: 1;
+  event_id: string;
   starts_at: string;
   ends_at: string;
   threshold_male: number;
   threshold_female: number;
   force_locked: boolean;
-  /** 카드 하나가 열람될 수 있는 최대 횟수. null이면 무제한. */
-  max_views_per_card: number | null;
+  purging: boolean;
+  /** 개인정보 처리방침과 동일하게 카드 소유자당 공개 가능한 최대 인원. */
+  max_views_per_card: number;
+}
+
+export interface SlotState {
+  allowance: number;
+  used: number;
+  remaining: number;
 }
 
 export interface SessionState {

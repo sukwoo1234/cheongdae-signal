@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/auth";
 import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
 import { isAllowedCJUEmail } from "@/lib/validation/email";
+import { createEventSubjectKey } from "@/lib/event-identity";
 
 type FinishSignInOptions = {
   crossBrowserConfirmed?: boolean;
@@ -81,23 +82,56 @@ export async function finishSignIn(
 
   const admin = createAdminClient();
 
-  const { data: ban } = await admin
+  const { data: ban, error: banLookupError } = await admin
     .from("banned_emails")
     .select("email")
     .eq("email", email)
     .maybeSingle();
+  if (banLookupError) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return "/?error=auth_failed";
+  }
   if (ban) {
     await supabase.auth.signOut().catch(() => {});
     clearState();
     return "/?error=banned";
   }
 
-  const { error: upsertError } = await admin
-    .from("users")
-    .upsert({ id: user.id, email }, { onConflict: "id" });
-  if (upsertError) {
+  const { data: config, error: configError } = await admin
+    .from("session_config")
+    .select("event_id, purging")
+    .eq("id", 1)
+    .single();
+  if (configError || !config || config.purging) {
+    await supabase.auth.signOut().catch(() => {});
     clearState();
     return "/?error=auth_failed";
+  }
+
+  let subjectKey: string;
+  try {
+    subjectKey = createEventSubjectKey(config.event_id, email);
+  } catch {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return "/?error=auth_failed";
+  }
+
+  // 사용자 행 생성과 행사별 가명 원장 연결을 DB 트랜잭션 하나로 처리한다.
+  // 같은 이메일이 탈퇴 후 재가입해도 기존 allowance/used 값은 초기화하지 않는다.
+  const { error: registerError } = await admin.rpc("register_event_participant", {
+    p_event_id: config.event_id,
+    p_user_id: user.id,
+    p_email: email,
+    p_subject_key: subjectKey,
+  });
+  if (registerError) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return registerError.message.includes("PARTICIPANT_BANNED")
+      ? "/?error=banned"
+      : "/?error=auth_failed";
   }
 
   const { data: prof } = await admin
