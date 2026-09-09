@@ -6,6 +6,8 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/browser";
 import { isLoginEmailOtpType } from "@/lib/auth-email";
 import { Button } from "@/components/ui/Button";
+import { SignalLoading } from "@/components/SignalLoading";
+import { CampusShell } from "@/components/CampusShell";
 
 type CallbackCredential =
   | { kind: "session"; accessToken: string; refreshToken: string }
@@ -173,21 +175,23 @@ export default function AuthCallbackPage() {
 
   if (needsConfirmation) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-6 bg-[#faf6e8]">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow">
-          <h1 className="text-xl font-bold text-gray-800">다른 브라우저에서 열렸어요</h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600">
+      <CampusShell className="min-h-[900px] sm:min-h-screen">
+        <div className="mx-auto mt-6 w-full max-w-[440px] rounded-[28px] border border-white/90 bg-white/90 p-7 text-center shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:p-9">
+          <span className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e5f8f4] text-lg font-black text-[#0b8f7e]">↗</span>
+          <p className="text-xs font-bold tracking-[0.12em] text-[#0ca18e]">브라우저 확인</p>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-[#071b33]">다른 브라우저에서 열렸어요.</h1>
+          <p className="mt-3 text-sm leading-6 text-[#637083]">
             이메일 앱이 로그인 링크를 새 브라우저로 열었습니다.
             {email && (
               <>
                 <br />
-                <span className="mt-2 inline-block rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-800">
+                <span className="mt-3 inline-block rounded-lg bg-[#f1f5f9] px-3 py-2 font-mono text-xs font-semibold text-[#203149]">
                   {email}
                 </span>
               </>
             )}
           </p>
-          <p className="mt-3 text-sm text-gray-700">본인의 청주대학교 이메일이 맞으면 계속하세요.</p>
+          <p className="mt-4 text-xs font-medium text-[#34445a]">본인의 청주대학교 이메일이 맞는지 확인해주세요.</p>
           <div className="mt-6 flex flex-col gap-2">
             <Button type="button" disabled={loading} onClick={() => completeSignIn(true)}>
               {loading ? "확인 중..." : "이 계정으로 계속"}
@@ -205,13 +209,9 @@ export default function AuthCallbackPage() {
             </Button>
           </div>
         </div>
-      </main>
+      </CampusShell>
     );
   }
 
-  return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <p className="text-sm text-gray-600">{loading ? "로그인 중이에요..." : "로그인을 확인해주세요"}</p>
-    </main>
-  );
+  return <SignalLoading message={loading ? "안전하게 로그인을 확인하고 있어요." : "로그인을 확인해주세요."} />;
 }

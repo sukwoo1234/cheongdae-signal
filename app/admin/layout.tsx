@@ -6,5 +6,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) {
     redirect("/");
   }
-  return <div className="min-h-screen bg-gray-900 text-gray-200">{children}</div>;
+  return <div className="admin-root min-h-screen bg-[#08090b] text-[#e8e8ec]">{children}</div>;
 }

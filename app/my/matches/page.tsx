@@ -24,39 +24,39 @@ export default function MyMatchesPage() {
       .then((d) => setMatches(d.matches ?? []));
   }, []);
 
-  if (!matches) return <main className="min-h-screen flex items-center justify-center">불러오는 중...</main>;
+  if (!matches) return <main className="flex min-h-screen items-center justify-center bg-[#f4f7fb] text-sm text-[#8390a2]">매칭을 불러오는 중…</main>;
 
   return (
-    <main className="min-h-screen bg-[#eef3ff] px-4 py-6">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="font-bold text-gray-800">내가 본 카드 ({matches.length})</h1>
-          <Link href="/board" className="text-xs text-gray-600">← 보드</Link>
+    <main className="min-h-screen bg-[#f4f7fb] px-5 py-8 sm:py-12">
+      <div className="signal-enter mx-auto max-w-md">
+        <div className="mb-6 flex items-start justify-between">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0ca18e]">Saved signals</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-0.035em] text-[#071b33]">내 매칭 <span className="text-[#15bfa9]">{matches.length}</span></h1></div>
+          <Link href="/board" className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#526176] shadow-sm ring-1 ring-[#dce4ee]">보드로</Link>
         </div>
 
         {matches.length === 0 && (
-          <p className="text-sm text-gray-500 text-center py-10">아직 본 카드가 없어요</p>
+          <div className="rounded-[24px] border border-dashed border-[#ccd6e2] bg-white/60 px-6 py-16 text-center"><p className="text-sm font-semibold text-[#526176]">아직 선택한 카드가 없어요.</p><p className="mt-1 text-xs text-[#8390a2]">보드에서 마음 가는 카드 한 장을 골라보세요.</p></div>
         )}
 
         {matches.map((m) => (
-          <div key={m.match_id} className="bg-white rounded-xl p-4 mb-3 shadow-sm flex items-center gap-3">
+          <div key={m.match_id} className="mb-3 flex items-center gap-4 rounded-[20px] border border-[#dce4ee] bg-white p-4 shadow-[0_10px_30px_rgba(24,46,76,0.06)]">
             <Postit text={m.one_liner} color={m.color} size="sm" rotation={1} />
             <div className="flex-1">
-              <div className="text-[10px] text-gray-500 mb-1">인스타그램</div>
+              <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">Instagram</div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold">@{m.instagram_id}</span>
+                <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">@{m.instagram_id}</span>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(m.instagram_id);
                     setCopiedId(m.match_id);
                     setTimeout(() => setCopiedId(null), 2000);
                   }}
-                  className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-semibold"
+                  className="shrink-0 rounded-lg bg-[#071b33] px-2.5 py-1.5 text-[10px] font-semibold text-white"
                 >
                   {copiedId === m.match_id ? "복사됨" : "복사"}
                 </button>
               </div>
-              <div className="text-[10px] text-gray-400 mt-1">
+              <div className="mt-1.5 text-[10px] text-[#9aa6b5]">
                 {new Date(m.created_at).toLocaleString("ko-KR")}
               </div>
             </div>

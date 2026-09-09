@@ -32,9 +32,10 @@ export function CountdownBanner({ endsAt }: Props) {
   const critical = secondsLeft <= 3600;
 
   return (
-    <div className={`text-center text-xs px-3 py-2 ${critical ? "bg-red-600 text-white" : "bg-yellow-100 text-yellow-800"}`}>
-      <strong>행사 종료 {hours}시간 {minutes}분 {seconds}초 남음.</strong>{" "}
-      <Link href="/my/matches" className="underline">내 매칭</Link>에서 인스타 ID 백업해두세요.
+    <div className={`px-4 py-2.5 text-center text-[11px] font-medium ${critical ? "bg-[#c93648] text-white" : "border-b border-[#dce4ee] bg-[#eef8f6] text-[#176d62]"}`}>
+      <strong>종료까지 {hours}시간 {minutes}분 {seconds}초</strong>
+      <span className="mx-2 opacity-40">·</span>
+      <Link href="/my/matches" className="font-bold underline underline-offset-2">매칭 백업하기</Link>
     </div>
   );
 }

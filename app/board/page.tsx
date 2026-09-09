@@ -8,6 +8,7 @@ import { RatioCounter } from "@/components/RatioCounter";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { RevealModal } from "@/components/RevealModal";
 import { CountdownBanner } from "@/components/CountdownBanner";
+import { SignalLoading } from "@/components/SignalLoading";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
 import type { SessionState, MyCard, MyMatch } from "@/lib/types";
@@ -134,7 +135,7 @@ export default function BoardPage() {
   }
 
   if (!sessionState) {
-    return <main className="min-h-screen flex items-center justify-center">불러오는 중...</main>;
+    return <SignalLoading message="보드의 새로운 카드들을 준비하고 있어요." />;
   }
   if (sessionState.in_postsession) return null;
 
@@ -148,17 +149,27 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#f4f7fb]">
       <CountdownBanner endsAt={sessionState.config.ends_at} />
-      <header className="border-b px-4 py-3 flex items-center justify-between sticky top-0 bg-white z-10">
-        <RatioCounter initialMale={sessionState.counts.male} initialFemale={sessionState.counts.female} />
-        <nav className="flex gap-3 text-xs">
-          <Link href="/my/matches" className="text-blue-600 font-semibold">내 매칭</Link>
-          <Link href="/my/card" className="text-gray-600">내 카드</Link>
-        </nav>
+      <header className="sticky top-0 z-10 border-b border-[#dce4ee] bg-white/90 px-4 py-3 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link href="/board" className="hidden items-center gap-2 text-xs font-extrabold text-[#071b33] sm:flex"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#071b33] text-[10px] text-white">S</span>청대 시그널</Link>
+            <RatioCounter initialMale={sessionState.counts.male} initialFemale={sessionState.counts.female} />
+          </div>
+          <nav className="flex shrink-0 gap-1 text-xs font-semibold">
+            <Link href="/my/matches" className="rounded-lg bg-[#071b33] px-3 py-2 text-white">내 매칭</Link>
+            <Link href="/my/card" className="rounded-lg px-3 py-2 text-[#526176] hover:bg-[#eef2f6]">내 카드</Link>
+          </nav>
+        </div>
       </header>
 
-      <div className="p-3">
+      <div className="mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
+        <div className="mb-5 px-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0ca18e]">Live board</p>
+          <h1 className="mt-1 text-xl font-extrabold tracking-[-0.03em] text-[#071b33]">딱 한 장, 마음 가는 카드를 골라보세요.</h1>
+          <p className="mt-1 text-xs text-[#8390a2]">카드를 열면 선택 기회가 사용되고 상대의 인스타그램 ID가 공개됩니다.</p>
+        </div>
         <BoardGrid
           reloadKey={reloadKey}
           onCardClick={(c) => {
@@ -186,7 +197,8 @@ export default function BoardPage() {
 
       {error && (
         <div
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs px-4 py-2 rounded-full shadow cursor-pointer"
+          role="alert"
+          className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 cursor-pointer rounded-xl bg-[#c93648] px-4 py-3 text-center text-xs font-semibold text-white shadow-xl"
           onClick={() => setError(null)}
         >
           {error}

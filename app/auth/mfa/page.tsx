@@ -120,14 +120,14 @@ export default function AdminMfaPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 bg-gray-900 text-gray-200">
-      <div className="w-full max-w-sm rounded-2xl bg-gray-800 p-6 shadow">
-        <h1 className="text-lg font-bold text-center">관리자 MFA 인증</h1>
+    <main className="min-h-screen bg-[#08090b] px-5 py-14 text-[#e8e8ec] sm:py-20">
+      <div className="signal-enter mx-auto w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#111216] p-6 shadow-2xl sm:p-8">
+        <div className="mb-6 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#7c6ff0] text-xs font-black text-white">S</span><div><p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#777781]">Secure access</p><h1 className="text-[15px] font-semibold text-white">관리자 MFA 인증</h1></div></div>
         {loading ? (
-          <p className="mt-6 text-sm text-center text-gray-400">인증 준비 중...</p>
+          <p className="mt-6 text-center text-sm text-[#85858f]">인증 준비 중…</p>
         ) : needsEnrollment && !enrollment ? (
           <>
-            <p className="mt-4 text-sm text-center text-gray-400">
+            <p className="mt-4 text-center text-sm leading-6 text-[#85858f]">
               관리자 계정에 MFA가 아직 등록되지 않았어요. 인증 앱 등록을 시작해주세요.
             </p>
             <Button onClick={startEnrollment} disabled={busy} className="mt-4 w-full">
@@ -136,7 +136,7 @@ export default function AdminMfaPage() {
           </>
         ) : enrollment ? (
           <>
-            <p className="mt-4 text-sm text-center text-gray-400">
+            <p className="mt-4 text-center text-sm leading-6 text-[#85858f]">
               QR 코드를 인증 앱으로 스캔한 뒤 표시된 6자리 코드를 입력해주세요.
             </p>
             <div className="mt-4 flex justify-center rounded-lg bg-white p-3">
@@ -147,12 +147,12 @@ export default function AdminMfaPage() {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <label htmlFor="mfa-secret" className="mt-4 block text-xs text-gray-400">
+            <label htmlFor="mfa-secret" className="mt-4 block text-xs text-[#85858f]">
               QR을 스캔할 수 없을 때 사용할 수동 설정 키
             </label>
             <Input
               id="mfa-secret"
-              className="mt-1 text-xs"
+              className="mt-1 border-white/10 bg-[#0c0d10] text-xs text-white"
               type="text"
               value={enrollment.secret}
               readOnly
@@ -160,7 +160,7 @@ export default function AdminMfaPage() {
               spellCheck={false}
             />
             <Input
-              className="mt-4 text-center tracking-[0.4em]"
+              className="mt-4 border-white/10 bg-[#0c0d10] text-center text-white tracking-[0.4em]"
               inputMode="numeric"
               maxLength={6}
               value={code}
@@ -174,11 +174,11 @@ export default function AdminMfaPage() {
           </>
         ) : verifiedFactorId ? (
           <>
-            <p className="mt-4 text-sm text-center text-gray-400">
+            <p className="mt-4 text-center text-sm text-[#85858f]">
               인증 앱의 6자리 코드를 입력해주세요.
             </p>
             <Input
-              className="mt-4 text-center tracking-[0.4em]"
+              className="mt-4 border-white/10 bg-[#0c0d10] text-center text-white tracking-[0.4em]"
               inputMode="numeric"
               maxLength={6}
               value={code}

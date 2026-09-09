@@ -5,7 +5,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       {...rest}
-      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      className={`min-h-12 w-full rounded-xl border border-[#d8e1eb] bg-white px-4 py-3 text-sm text-[#10233e] outline-none transition placeholder:text-[#9aa6b5] hover:border-[#bdc9d7] focus:border-[#15bfa9] focus:ring-4 focus:ring-[#15bfa9]/10 ${className}`}
     />
   )
 );

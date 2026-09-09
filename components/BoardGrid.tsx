@@ -30,13 +30,13 @@ export function BoardGrid({ onCardClick, reloadKey }: Props) {
       .catch(() => setLoading(false));
   }, [reloadKey]);
 
-  if (loading) return <p className="text-center text-gray-500 py-10 text-sm">불러오는 중...</p>;
+  if (loading) return <p className="py-20 text-center text-sm text-[#8390a2]">카드를 불러오는 중…</p>;
   if (cards.length === 0) {
-    return <p className="text-center text-gray-500 py-10 text-sm">아직 카드가 없어요. 잠시만요.</p>;
+    return <p className="py-20 text-center text-sm text-[#8390a2]">아직 공개된 카드가 없어요.</p>;
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-[#faf6e8] p-4 rounded-xl">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-7 rounded-[24px] border border-[#e0e7ef] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8fb_75%)] px-3 py-8 sm:grid-cols-3 sm:px-6 md:grid-cols-4 lg:grid-cols-5">
       {cards.map((c) => (
         <div key={c.id} className="flex justify-center">
           <Postit text={c.one_liner} color={c.color} size="md" onClick={() => onCardClick(c)} />

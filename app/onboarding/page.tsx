@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CampusShell } from "@/components/CampusShell";
 
 export default function Onboarding() {
   const [gender, setGender] = useState<"M" | "F" | null>(null);
@@ -35,53 +36,61 @@ export default function Onboarding() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#faf6e8]">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6">
-        <h1 className="text-lg font-bold text-center mb-6">시작하기 전에</h1>
+    <CampusShell className="min-h-[900px] sm:min-h-screen">
+      <section className="relative mx-auto mt-8 w-full max-w-[560px] rounded-[32px] border border-white/90 bg-white/90 px-6 pb-7 pt-16 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:px-10 sm:pb-10">
+        <div className="absolute -top-10 left-1/2 flex h-20 w-20 -translate-x-1/2 items-center justify-center rounded-full border-[8px] border-white bg-gradient-to-br from-[#e4e6ff] to-[#f7e9ff] text-[#6d7ee8] shadow-sm">
+          <svg viewBox="0 0 24 24" fill="none" className="h-9 w-9" aria-hidden><path d="m3 9 9-4 9 4-9 4-9-4Z" fill="currentColor" opacity=".8"/><path d="M7 11.2v4.1c2.8 2.2 7.2 2.2 10 0v-4.1" stroke="currentColor" strokeWidth="1.6"/><path d="M21 9v5" stroke="currentColor" strokeWidth="1.6"/></svg>
+        </div>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-black tracking-[-0.045em] text-[#10243f]">시작하기 전에</h1>
+          <p className="mt-2 text-sm text-[#7083a0]">더 좋은 매칭을 위해 몇 가지만 알려주세요.</p>
+        </div>
 
         <div className="mb-4">
-          <label className="text-xs text-gray-600 block mb-2">성별 (변경 불가)</label>
+          <label className="mb-2.5 block text-sm font-bold text-[#3f5677]">성별 <span className="font-normal text-[#8395ad]">(변경 불가)</span></label>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setGender("M")}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold ${
-                gender === "M" ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-700"
+              className={`min-h-16 flex-1 rounded-xl border py-2 text-base font-bold transition ${
+                gender === "M" ? "border-[#78a9ef] bg-blue-50 text-[#2f72d3] shadow-sm ring-2 ring-blue-100" : "border-[#bfd4f3] bg-[#f7faff] text-[#3d78cd] hover:bg-blue-50"
               }`}
             >
-              남자
+              <span className="mr-2 text-xl" aria-hidden>●</span> 남자
             </button>
             <button
+              type="button"
               onClick={() => setGender("F")}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold ${
-                gender === "F" ? "bg-pink-500 text-white" : "bg-white border border-gray-300 text-gray-700"
+              className={`min-h-16 flex-1 rounded-xl border py-2 text-base font-bold transition ${
+                gender === "F" ? "border-[#eca8c2] bg-pink-50 text-[#d65e8a] shadow-sm ring-2 ring-pink-100" : "border-[#f1c5d5] bg-[#fff9fb] text-[#d36a92] hover:bg-pink-50"
               }`}
             >
-              여자
+              <span className="mr-2 text-xl" aria-hidden>●</span> 여자
             </button>
           </div>
         </div>
 
         <div className="mb-2">
-          <label className="text-xs text-gray-600 block mb-2">약관 동의 (필수)</label>
-          <label className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-3 py-2 mb-2 cursor-pointer">
-            <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
-            <span className="text-xs">
-              <Link href="/terms" target="_blank" className="text-blue-600 underline">이용약관</Link> 동의
+          <label className="mb-2.5 mt-6 block text-sm font-bold text-[#3f5677]">약관 동의 <span className="font-normal text-[#8395ad]">(필수)</span></label>
+          <label className="mb-2 flex cursor-pointer items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3.5 transition hover:bg-[#f8fbff]">
+            <input className="h-5 w-5 accent-[#4a86dc]" type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
+            <span className="flex flex-1 items-center justify-between text-sm text-[#263c5b]">
+              <span><Link href="/terms" target="_blank" className="font-semibold text-[#3274d1] underline underline-offset-2">이용약관</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
             </span>
           </label>
-          <label className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-3 py-2 mb-4 cursor-pointer">
-            <input type="checkbox" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
-            <span className="text-xs">
-              <Link href="/privacy" target="_blank" className="text-blue-600 underline">개인정보 처리방침</Link> 동의
+          <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3.5 transition hover:bg-[#f8fbff]">
+            <input className="h-5 w-5 accent-[#4a86dc]" type="checkbox" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
+            <span className="flex flex-1 items-center justify-between text-sm text-[#263c5b]">
+              <span><Link href="/privacy" target="_blank" className="font-semibold text-[#3274d1] underline underline-offset-2">개인정보 처리방침</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
             </span>
           </label>
         </div>
 
-        <Button onClick={submit} disabled={!canSubmit} className="w-full">
-          {loading ? "저장 중..." : "다음"}
+        <Button onClick={submit} disabled={!canSubmit} className="h-14 w-full bg-gradient-to-r from-[#5d8fe0] to-[#91a5dc] text-base shadow-[0_12px_28px_rgba(75,112,174,.22)]">
+          {loading ? "저장 중…" : "다음  →"}
         </Button>
-        {error && <p className="text-red-600 text-xs text-center mt-3">{error}</p>}
-      </div>
-    </main>
+        {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
+      </section>
+    </CampusShell>
   );
 }

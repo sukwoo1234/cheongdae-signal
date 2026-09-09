@@ -258,6 +258,9 @@ Authentication → URL Configuration에는 production의 `/auth/callback?*` 패�
 검증된 TOTP factor를 등록해야 로그인 뒤 `/auth/mfa`에서 관리자 콘솔에 들어갈 수 있다.
 Supabase의 **Magic Link**와 **Confirm signup** 이메일 템플릿은 모두 링크에
 `{{ .ConfirmationURL }}`을 사용해야 요청 때 전달한 `state` 포함 callback이 보존된다.
+브랜드 메일 HTML은 `supabase/templates/magic-link.html`과
+`supabase/templates/confirmation.html`에 있으며, Hosted Supabase에서는
+**Authentication → Email Templates**의 두 항목에 각각 같은 내용을 붙여 넣어야 한다.
 모바일 이메일 앱이 다른 브라우저를 열어 `state` 쿠키가 없을 때는 일반 CJU 사용자만
 콜백 화면에서 이메일 계정을 명시적으로 확인한 후 이어갈 수 있다. 관리자 계정은 이
 예외를 허용하지 않으며 동일 브라우저의 `state`와 AAL2 MFA를 계속 요구한다.

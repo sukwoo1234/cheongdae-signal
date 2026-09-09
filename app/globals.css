@@ -8,16 +8,60 @@
   --postit-purple: #e1bee7;
   --postit-orange: #ffccbc;
   --cork: #d4b896;
-  --bg: #faf6e8;
+  --bg: #f4f7fb;
+  --ink: #071b33;
+  --muted: #637083;
+  --line: #dce4ee;
+  --signal: #15bfa9;
+  --signal-dark: #0ca18e;
+}
+
+html {
+  background: var(--bg);
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
   background: var(--bg);
-  color: #333;
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 * {
   box-sizing: border-box;
+}
+
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+::selection {
+  background: #baf1e8;
+  color: var(--ink);
+}
+
+@keyframes signal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.signal-enter {
+  animation: signal-in 420ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.admin-scrollbar {
+  scrollbar-color: #34343c transparent;
+  scrollbar-width: thin;
+}
+
+body:has(.admin-root) > footer {
+  display: none;
 }

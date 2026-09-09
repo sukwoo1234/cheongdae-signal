@@ -46,22 +46,26 @@ export default function EndPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-gray-900 text-white">
-      <h1 className="text-2xl font-bold mb-3">청대 시그널이 종료됐어요</h1>
-      <p className="text-sm text-gray-300 text-center max-w-sm">
+    <main className="min-h-screen bg-[#071b33] px-5 py-16 text-white">
+      <section className="signal-enter mx-auto flex w-full max-w-md flex-col items-center rounded-[28px] border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl backdrop-blur sm:p-10">
+      <span className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#15bfa9] text-lg font-black text-[#071b33]">S</span>
+      <p className="text-xs font-bold tracking-[0.12em] text-[#69dfcf]">SESSION CLOSED</p>
+      <h1 className="mb-3 mt-2 text-2xl font-extrabold tracking-[-0.035em]">오늘의 시그널이 종료됐어요.</h1>
+      <p className="max-w-sm text-center text-sm leading-6 text-slate-300">
         모든 매칭이 종료됐어요.<br />
         곧 모든 데이터가 폐기될 예정이에요.
       </p>
       <Link
         href="/"
-        className="mt-6 rounded bg-gray-700 px-4 py-2 text-xs font-semibold"
+        className="mt-7 min-h-11 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-semibold transition hover:bg-white/15"
       >
         다시 로그인하기
       </Link>
-      <p className="mt-2 text-[10px] text-gray-500">
+      <p className="mt-3 text-[10px] text-slate-500">
         운영 시간이 연장되면 로그인 화면으로 자동 이동합니다.
       </p>
-      <p className="text-xs text-gray-500 mt-8">고생 많으셨습니다.</p>
+      <p className="mt-8 text-xs text-slate-500">참여해주셔서 감사합니다.</p>
+      </section>
     </main>
   );
 }

@@ -41,10 +41,10 @@ export function RatioCounter({ initialMale, initialFemale }: Props) {
   const label = { good: "균형 양호", warn: "비율 불균형", critical: "심각 불균형" }[level];
 
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-full">남 {male}</span>
-      <span className="bg-pink-50 text-pink-600 font-bold px-2 py-1 rounded-full">여 {female}</span>
-      <span className={`${dot}`}>● {label}</span>
+    <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs">
+      <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 font-bold text-blue-600">남 {male}</span>
+      <span className="rounded-full border border-pink-100 bg-pink-50 px-2.5 py-1 font-bold text-pink-600">여 {female}</span>
+      <span className={`ml-0.5 font-semibold ${dot}`}><span aria-hidden>●</span> {label}</span>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Postit } from "@/components/Postit";
 import { ColorPicker } from "@/components/ColorPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampusShell } from "@/components/CampusShell";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
 
 export default function NewCard() {
@@ -54,44 +55,54 @@ export default function NewCard() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-6 py-8 bg-[#faf6e8]">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow p-6">
-        <h1 className="text-lg font-bold text-center mb-6">내 카드 만들기</h1>
+    <CampusShell className="min-h-[1020px] sm:min-h-screen">
+      <section className="relative mx-auto mt-8 w-full max-w-[560px] rounded-[32px] border border-white/90 bg-white/90 px-6 pb-7 pt-16 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:px-10 sm:pb-10">
+        <div className="absolute -top-10 left-1/2 flex h-20 w-20 -translate-x-1/2 items-center justify-center rounded-full border-[8px] border-white bg-gradient-to-br from-[#8875ed] via-[#e267bc] to-[#ffc986] shadow-sm">
+          <svg viewBox="0 0 24 24" fill="none" className="h-9 w-9 text-white" aria-hidden><rect x="5" y="5" width="14" height="14" rx="4" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.8"/><circle cx="16.8" cy="7.4" r="1" fill="currentColor"/></svg>
+        </div>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-black tracking-[-0.045em] text-[#10243f]">내 <span className="text-[#3d7bd2]">카드</span> 만들기</h1>
+          <p className="mt-2 text-sm text-[#7083a0]">나만의 한 줄 소개로 새로운 인연을 시작해보세요.</p>
+        </div>
 
-        <label className="text-xs text-gray-600 block mb-1">한 줄 소개</label>
+        <label className="mb-2 block text-sm font-bold text-[#3f5677]">✎ &nbsp;한 줄 소개</label>
         {/* maxLength(UTF-16 단위) 대신 코드포인트로 센다. 서버·DB의 20자 기준과 맞춘다. */}
         <Input
-          placeholder="예: 강동원 닮은꼴"
+          placeholder="예: 산책과 야구를 좋아해요"
+          className="h-14 text-base"
           value={oneLiner}
           onChange={(e) => {
             const v = e.target.value;
             if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
           }}
         />
-        <div className="text-right text-xs text-gray-400 mt-0.5">
+        <div className="mt-1 text-right text-[10px] font-medium text-[#9aa6b5]">
           {[...oneLiner].length}/{ONELINER_MAX_LENGTH}
         </div>
 
-        <label className="text-xs text-gray-600 block mt-3 mb-1">인스타그램 ID</label>
+        <label className="mb-2 mt-5 block text-sm font-bold text-[#3f5677]">♙ &nbsp;인스타그램 ID</label>
         <Input
-          placeholder="@my_insta_id"
+          placeholder="@ 없이 입력"
+          className="h-14 text-base"
           value={instaId}
           onChange={(e) => setInstaId(e.target.value)}
         />
 
-        <label className="text-xs text-gray-600 block mt-4 mb-2">포스트잇 색</label>
+        <label className="mb-3 mt-6 block text-sm font-bold text-[#3f5677]">◉ &nbsp;포스트잇 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 
-        <div className="mt-6 text-xs text-gray-500 mb-2 text-center">미리보기</div>
-        <div className="flex justify-center mb-6">
+        <div className="mt-7 rounded-2xl bg-[linear-gradient(135deg,rgba(239,246,255,.82),rgba(255,243,249,.82))] px-4 py-5">
+          <div className="mb-4 text-center text-xs font-bold text-[#536c8e]">◉ &nbsp;미리보기</div>
+          <div className="flex justify-center">
           <Postit text={oneLiner || "한 줄 소개"} color={color} size="md" rotation={-1.5} />
+          </div>
         </div>
 
-        <Button onClick={submit} disabled={!canSubmit} className="w-full">
-          {submitting ? "올리는 중..." : "보드에 올리기"}
+        <Button onClick={submit} disabled={!canSubmit} className="mt-6 h-14 w-full bg-gradient-to-r from-[#4b8eea] to-[#70a6ee] text-base shadow-[0_12px_28px_rgba(64,126,212,.24)]">
+          {submitting ? "카드 올리는 중…" : "보드에 올리기  →"}
         </Button>
-        {error && <p className="text-red-600 text-xs text-center mt-3">{error}</p>}
-      </div>
-    </main>
+        {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
+      </section>
+    </CampusShell>
   );
 }

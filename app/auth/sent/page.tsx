@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { AuthCaptcha } from "@/components/AuthCaptcha";
+import { CampusShell } from "@/components/CampusShell";
 
 function SentInner() {
   const params = useSearchParams();
@@ -50,32 +51,32 @@ function SentInner() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#faf6e8]">
-      <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6 text-3xl">
-        ✉
-      </div>
-      <h1 className="text-2xl font-bold text-gray-800">메일을 확인해주세요</h1>
-      <p className="text-sm text-gray-600 mt-3 text-center max-w-sm">
-        <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">{email}</span><br />
-        으로 매직링크를 보냈어요.<br />
-        <strong>15분 안에</strong> 클릭해주세요.
-      </p>
-      <p className="text-xs text-gray-500 mt-6">메일이 안 오면 스팸함도 확인해주세요</p>
+    <CampusShell className="min-h-[900px] sm:min-h-screen">
+      <section className="mx-auto mt-6 w-full max-w-[460px] rounded-[30px] border border-white/90 bg-white/90 p-7 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:p-9">
+        <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dff8f3] text-[#079381]">
+          <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden><path d="M4 6.5h16v11H4z" stroke="currentColor" strokeWidth="1.7"/><path d="m5 7.5 7 5 7-5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
+        </div>
+        <p className="text-xs font-bold tracking-[0.12em] text-[#0ca18e]">링크를 보냈어요</p>
+        <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-[#071b33]">메일함을 확인해주세요.</h1>
+        <p className="mt-3 text-sm leading-6 text-[#637083]">
+          아래 주소로 로그인 링크를 보냈습니다. 메일에서 <strong className="text-[#24374f]">청대 시그널 시작하기</strong>를 눌러주세요.
+        </p>
+        <div className="mt-5 rounded-2xl bg-[#f1f5f9] px-4 py-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8390a2]">받는 주소</div>
+          <div className="mt-1 break-all font-mono text-xs font-semibold text-[#203149]">{email}</div>
+        </div>
+        <div className="mt-5 flex gap-3 rounded-xl border border-[#e4eaf1] p-3 text-xs leading-5 text-[#637083]">
+          <span className="font-bold text-[#0ca18e]">15분</span>
+          <span>링크는 한 번만 사용할 수 있어요. 메일이 없다면 스팸함도 확인해주세요.</span>
+        </div>
 
-      <div className="mt-4">
-        <AuthCaptcha key={captchaKey} onToken={setCaptchaToken} />
-      </div>
-
-      <Button
-        variant="secondary"
-        onClick={resend}
-        disabled={resending || cooldown > 0}
-        className="mt-4 text-xs"
-      >
-        {resent ? "다시 보냈어요" : cooldown > 0 ? `다시 보내기 (${cooldown}s)` : "다시 보내기"}
-      </Button>
-      {error && <p className="text-red-600 text-xs text-center mt-3">{error}</p>}
-    </main>
+        <div className="mt-6 flex justify-center"><AuthCaptcha key={captchaKey} onToken={setCaptchaToken} /></div>
+        <Button variant="secondary" onClick={resend} disabled={resending || cooldown > 0} className="mt-4 w-full text-xs">
+          {resent ? "새 링크를 보냈어요" : cooldown > 0 ? `다시 보내기 · ${cooldown}초` : "로그인 링크 다시 보내기"}
+        </Button>
+        {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
+      </section>
+    </CampusShell>
   );
 }
 

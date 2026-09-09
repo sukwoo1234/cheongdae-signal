@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 개인정보 처리방침은 상시 공개해야 한다.
             예전에는 온보딩 화면에서만 도달할 수 있어, 가입을 마친 이용자는
             앱 어디에서도 처리방침을 다시 볼 수 없었다. */}
-        <footer className="border-t mt-8 py-5 px-6 flex justify-center gap-4 text-[11px] text-gray-500">
+        <footer className="border-t border-[#dce4ee] bg-white px-6 py-6 flex justify-center gap-4 text-[11px] text-[#78869a]">
           <Link href="/terms" className="hover:underline">
             이용약관
           </Link>
