@@ -57,7 +57,7 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
           <path d="M12 119C17 86 11 52 37 28C65 3 116 4 169 8C165 54 150 96 119 119C89 142 43 137 12 119Z" fill={`url(#${gradientId})`} stroke="rgba(255,255,255,.92)" strokeWidth="1.5" />
           <path d="M26 116C66 96 111 64 157 19" fill="none" stroke={palette.line} strokeOpacity=".12" strokeWidth="1.2" />
         </svg>
-        <span className="absolute inset-x-[20%] top-[22%] bottom-[34%] flex items-center justify-center break-words leading-[1.6] [overflow-wrap:anywhere]">
+        <span className="absolute inset-x-[14%] top-[22%] bottom-[34%] flex items-center justify-center break-words leading-[1.6] [overflow-wrap:anywhere]">
           {text}
         </span>
         <span aria-hidden className="absolute bottom-[18%] left-[40%] text-lg font-normal opacity-65" style={{ color: palette.line }}>{icon}</span>
