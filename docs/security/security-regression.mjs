@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0013_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0014_'));
 
 const A = '10000000-0000-4000-8000-000000000001';
 const A2 = '10000000-0000-4000-8000-000000000006';
@@ -124,6 +124,21 @@ await expectDbError(
   () => db.query('select * from public.consume_slot_and_reveal($1)', [cardB]),
   'CARD_FULL',
 );
+
+await owner();
+await db.exec('update public.session_config set max_views_per_card=null where id=1');
+secured(
+  'a null card-view cap means the card is not full',
+  (await db.query('select private.card_is_full($1) as full', [cardB])).rows[0].full === false,
+);
+await identity(C, 'c@cju.ac.kr');
+secured(
+  'multiple viewers may choose the same card when the optional cap is blank',
+  (await db.query('select * from public.consume_slot_and_reveal($1)', [cardB])).rows[0].instagram_id === 'fixture_b',
+);
+await owner();
+await db.query('select * from public.grant_event_slot($1)', [C]);
+await db.exec('update public.session_config set max_views_per_card=1 where id=1');
 
 await owner();
 await db.query('delete from auth.users where id=$1', [B]);

@@ -69,8 +69,8 @@ export interface SessionConfig {
   threshold_female: number;
   force_locked: boolean;
   purging: boolean;
-  /** 개인정보 처리방침과 동일하게 카드 소유자당 공개 가능한 최대 인원. */
-  max_views_per_card: number;
+  /** 카드 소유자당 공개 가능한 최대 인원. null이면 별도 상한 없음. */
+  max_views_per_card: number | null;
 }
 
 export interface SlotState {

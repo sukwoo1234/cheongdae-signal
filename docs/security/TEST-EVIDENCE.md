@@ -7,7 +7,7 @@
 | `npm test -- --run` | 9 files / 49 tests passed |
 | `npx tsc --noEmit --incremental false` | exit 0 |
 | `npm run build` | exit 0 |
-| `npm run test:security-db` | 16 security regression checks passed |
+| `npm run test:security-db` | 18 security regression checks passed |
 | `npm audit --ignore-scripts --json` | 0 vulnerabilities |
 
 DB 회귀 테스트는 전체 마이그레이션을 빈 PostgreSQL 호환 엔진에 적용한 뒤 합성

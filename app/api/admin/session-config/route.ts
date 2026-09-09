@@ -54,7 +54,7 @@ export async function PATCH(req: Request) {
         break;
 
       case "max_views_per_card":
-        if (!Number.isInteger(v) || (v as number) < 1) {
+        if (v !== null && (!Number.isInteger(v) || (v as number) < 1)) {
           return NextResponse.json({ error: "INVALID_MAX_VIEWS" }, { status: 400 });
         }
         updates[key] = v;

@@ -222,7 +222,7 @@ $ node --env-file=.env.local scripts/verify-security.mjs
 - 사용자가 앱 내에서 계정·카드·매칭 상세정보를 즉시 삭제 가능 (`auth.users` 포함)
 - 동일 행사 중복 이용 방지용 가명 원장만 행사 폐기 시점까지 분리 보관 후 삭제
 - 처리방침에 보호책임자·국외 이전·파기 절차·권익침해 구제방법 명시 (`/privacy`)
-- 인스타그램 ID는 슬롯을 사용해 열람한 1인에게만 공개
+- 인스타그램 ID는 슬롯을 사용해 해당 카드를 선택한 참가자에게만 공개
 
 ---
 
@@ -291,6 +291,7 @@ supabase/migrations/
   0011            매직링크 인증 방식 DB 경계
   0012            throttle 행 보존기간 정리
   0013            행사별 가명 이용 원장 · DB 접근 경계 · 안전한 폐기
+  0014            카드별 공개 상한 선택 설정 복구 (null이면 무제한)
 scripts/
   verify-security.mjs   PostgREST 직접 호출 기반 인가 검증
 docs/
