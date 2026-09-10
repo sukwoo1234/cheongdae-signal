@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CampusShell } from "@/components/CampusShell";
+import { GraduationCapBadge } from "@/components/GraduationCapBadge";
 
 export default function Onboarding() {
   const [gender, setGender] = useState<"M" | "F" | null>(null);
@@ -56,9 +57,7 @@ export default function Onboarding() {
   return (
     <CampusShell className="min-h-[900px] sm:min-h-screen">
       <section className="relative mx-auto mt-8 w-full max-w-[560px] rounded-[32px] border border-white/90 bg-white/90 px-6 pb-7 pt-16 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:px-10 sm:pb-10">
-        <div className="absolute -top-10 left-1/2 flex h-20 w-20 -translate-x-1/2 items-center justify-center rounded-full border-[8px] border-white bg-gradient-to-br from-[#e4e6ff] to-[#f7e9ff] text-[#6d7ee8] shadow-sm">
-          <svg viewBox="0 0 24 24" fill="none" className="h-9 w-9" aria-hidden><path d="m3 9 9-4 9 4-9 4-9-4Z" fill="currentColor" opacity=".8"/><path d="M7 11.2v4.1c2.8 2.2 7.2 2.2 10 0v-4.1" stroke="currentColor" strokeWidth="1.6"/><path d="M21 9v5" stroke="currentColor" strokeWidth="1.6"/></svg>
-        </div>
+        <GraduationCapBadge />
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-black tracking-[-0.045em] text-[#10243f]">시작하기 전에</h1>
           <p className="mt-2 text-sm text-[#7083a0]">더 좋은 매칭을 위해 몇 가지만 알려주세요.</p>

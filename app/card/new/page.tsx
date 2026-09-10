@@ -7,6 +7,7 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
+import { GraduationCapBadge } from "@/components/GraduationCapBadge";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
 
 export default function NewCard() {
@@ -57,9 +58,7 @@ export default function NewCard() {
   return (
     <CampusShell className="min-h-[1020px] sm:min-h-screen">
       <section className="relative mx-auto mt-8 w-full max-w-[560px] rounded-[32px] border border-white/90 bg-white/90 px-6 pb-7 pt-16 shadow-[0_28px_80px_rgba(54,90,139,.18)] backdrop-blur-xl sm:px-10 sm:pb-10">
-        <div className="absolute -top-10 left-1/2 flex h-20 w-20 -translate-x-1/2 items-center justify-center rounded-full border-[8px] border-white bg-gradient-to-br from-[#8875ed] via-[#e267bc] to-[#ffc986] shadow-sm">
-          <svg viewBox="0 0 24 24" fill="none" className="h-9 w-9 text-white" aria-hidden><rect x="5" y="5" width="14" height="14" rx="4" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.8"/><circle cx="16.8" cy="7.4" r="1" fill="currentColor"/></svg>
-        </div>
+        <GraduationCapBadge />
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-black tracking-[-0.045em] text-[#10243f]">내 <span className="text-[#3d7bd2]">카드</span> 만들기</h1>
           <p className="mt-2 text-sm text-[#7083a0]">나만의 한 줄 소개로 새로운 인연을 시작해보세요.</p>

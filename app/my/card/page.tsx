@@ -109,7 +109,7 @@ export default function MyCardPage() {
           onClick={toggleHide}
           className={`min-h-13 w-full rounded-2xl border-2 px-3 py-3 text-sm font-bold transition ${hidden ? "border-[#9cddd4] bg-[#eefaf8] text-[#0b8f7e]" : "border-[#ffb8c5] bg-[#fffafb] text-[#e63d58]"}`}
         >
-          {hidden ? "다시 보드에 올리기" : "카드 내리기 (킬 스위치)"}
+          {hidden ? "다시 보드에 올리기" : "카드 내리기 (숨기기)"}
         </button>
         <p className="mt-2 text-center text-[10px] text-[#8390a2]">
           이미 본 사람의 인스타 ID는 회수되지 않아요.
