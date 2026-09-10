@@ -11,6 +11,7 @@ import { POST as banUser } from "@/app/api/admin/users/[id]/ban/route";
 import { getActiveUser, getAdminContext } from "@/lib/auth";
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { GET as getSession } from "@/app/api/session/route";
+import { POST as removeCard } from "@/app/api/admin/cards/[id]/remove/route";
 
 const headers = { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" };
 const student = {
@@ -38,11 +39,11 @@ function turnstileResult(overrides: Record<string, unknown> = {}) {
 
 function adminMock() {
   const query: any = {
-    select: vi.fn(), eq: vi.fn(), update: vi.fn(), upsert: vi.fn(),
+    select: vi.fn(), eq: vi.fn(), update: vi.fn(), delete: vi.fn(), upsert: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     single: vi.fn().mockResolvedValue({ data: { email: student.email }, error: null }),
   };
-  for (const method of ["select", "eq", "update"]) query[method].mockReturnValue(query);
+  for (const method of ["select", "eq", "update", "delete"]) query[method].mockReturnValue(query);
   query.upsert.mockResolvedValue({ error: null });
   const admin = {
     from: vi.fn().mockReturnValue(query),
@@ -212,6 +213,28 @@ describe("login security boundary", () => {
       ban_duration: "876000h",
     });
     expect(response.status).toBe(200);
+  });
+
+  it("deletes only the selected card without banning its user", async () => {
+    const { admin, query } = adminMock();
+    query.maybeSingle.mockResolvedValueOnce({
+      data: { id: "20000000-0000-4000-8000-000000000001" },
+      error: null,
+    });
+    serverMock(
+      { ...student, id: process.env.ADMIN_USER_ID!, email: "admin@example.com" },
+      "aal2",
+    );
+
+    const response = await removeCard(
+      new Request("https://audit.invalid/api/admin/cards/test/remove", { method: "POST", headers }),
+      { params: Promise.resolve({ id: "20000000-0000-4000-8000-000000000001" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(query.delete).toHaveBeenCalledOnce();
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
   });
 
   it("reports logout revocation failure instead of a false success", async () => {

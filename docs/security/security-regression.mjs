@@ -191,6 +191,15 @@ await db.query('select * from public.grant_event_slot($1)', [C]);
 await db.exec('update public.session_config set max_views_per_card=1 where id=1');
 
 await owner();
+await db.query('delete from public.cards where id=$1', [cardB]);
+await identity(A, 'a@cju.ac.kr');
+await expectDbError(
+  'deleting only a viewed card cannot restore the viewer slot',
+  () => db.query('select * from public.consume_slot_and_reveal($1)', [cardD]),
+  'SLOT_ALREADY_USED',
+);
+
+await owner();
 await db.query('delete from auth.users where id=$1', [B]);
 await identity(A, 'a@cju.ac.kr');
 await expectDbError(

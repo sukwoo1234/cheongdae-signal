@@ -196,12 +196,30 @@ export default function AdminConsole() {
     await doSearch();
   }
 
-  async function deleteCard(id: string) {
-    if (!confirm("이 카드를 삭제하고 해당 사용자를 차단할까요?")) return;
-    await fetch(`/api/admin/cards/${id}/delete`, {
+  async function removeCard(id: string) {
+    if (!confirm("이 카드만 삭제할까요? 사용자는 차단되지 않으며 새 카드를 만들 수 있습니다. 기존 매칭 목록에서는 카드가 사라지지만 이미 사용한 선택 기회는 복구되지 않습니다.")) return;
+    const response = await fetch(`/api/admin/cards/${id}/remove`, {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
+    if (!response.ok) {
+      alert("카드를 삭제하지 못했습니다. 다시 시도해주세요.");
+      return;
+    }
+    await doSearch();
+    await loadStats(false);
+  }
+
+  async function deleteAndBanCard(id: string) {
+    if (!confirm("이 카드를 삭제하고 해당 사용자를 차단할까요?")) return;
+    const response = await fetch(`/api/admin/cards/${id}/delete`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!response.ok) {
+      alert("카드 삭제·차단을 완료하지 못했습니다. 다시 확인해주세요.");
+      return;
+    }
     await doSearch();
     await loadStats(false);
   }
@@ -430,9 +448,10 @@ export default function AdminConsole() {
                       </div>
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-medium ${card.hidden_by_admin ? "bg-[#30261a] text-[#d9a84f]" : "bg-[#183029] text-[#58c9ad]"}`}>{card.hidden_by_admin ? "숨김" : "공개"}</span>
                     </div>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button onClick={() => void hideCard(card.id)} className="rounded-md border border-white/[0.08] px-2.5 py-1.5 text-[9px] font-medium text-[#a4a4ad] hover:bg-white/[0.04]">{card.hidden_by_admin ? "다시 공개" : "숨기기"}</button>
-                      <button onClick={() => void deleteCard(card.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185] hover:bg-[#251216]">삭제 + 차단</button>
+                      <button onClick={() => void removeCard(card.id)} className="rounded-md border border-[#4e4230] px-2.5 py-1.5 text-[9px] font-medium text-[#e0b86d] hover:bg-[#221d14]">삭제만</button>
+                      <button onClick={() => void deleteAndBanCard(card.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185] hover:bg-[#251216]">삭제 + 차단</button>
                     </div>
                   </div>
                 ))}
