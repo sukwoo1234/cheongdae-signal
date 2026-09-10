@@ -94,11 +94,7 @@ export default function NewCard() {
         <div className="mt-7 rounded-[24px] border border-white/90 bg-[linear-gradient(135deg,rgba(239,246,255,.82),rgba(255,243,249,.82))] px-4 py-5 shadow-inner">
           <div className="mb-4 text-center text-xs font-bold text-[#536c8e]">◉ &nbsp;미리보기</div>
           <div className="flex justify-center">
-            <div className="relative">
-              <PetalCard text={oneLiner || "한 줄 소개"} color={color} size="lg" rotation={-2} />
-              <span aria-hidden className="absolute -right-3 top-3 h-1.5 w-5 rotate-[62deg] rounded-full bg-[#f08bab]" />
-              <span aria-hidden className="absolute -right-5 top-8 h-1.5 w-5 rotate-[12deg] rounded-full bg-[#f08bab]" />
-            </div>
+            <PetalCard text={oneLiner || "한 줄 소개"} color={color} size="lg" rotation={-2} />
           </div>
         </div>
 

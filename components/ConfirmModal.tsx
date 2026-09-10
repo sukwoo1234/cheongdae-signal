@@ -37,12 +37,7 @@ export function ConfirmModal({ card, onConfirm, onCancel, loading }: Props) {
         </button>
 
         <div className="mb-5 mt-3 flex justify-center">
-          <div className="relative">
-            <PetalCard text={card.one_liner} color={card.color} size="lg" rotation={-2} />
-            <span aria-hidden className="absolute -right-3 top-3 h-1.5 w-5 rotate-[62deg] rounded-full bg-[#f08bab]" />
-            <span aria-hidden className="absolute -right-5 top-8 h-1.5 w-5 rotate-[12deg] rounded-full bg-[#f08bab]" />
-            <span aria-hidden className="absolute right-1 -top-1 h-1.5 w-5 rotate-[105deg] rounded-full bg-[#f08bab]" />
-          </div>
+          <PetalCard text={card.one_liner} color={card.color} size="lg" rotation={-2} />
         </div>
         <h2 id="confirm-card-title" className="text-[22px] font-black tracking-[-0.04em] text-[#0c2748]">
           이 카드가 마음에 드나요?

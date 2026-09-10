@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Postit } from "@/components/Postit";
 import { CampusShell } from "@/components/CampusShell";
+import { PetalCard } from "@/components/PetalCard";
 import { SignalLoading } from "@/components/SignalLoading";
 import type { PostitColor } from "@/lib/constants";
 
@@ -46,7 +46,7 @@ export default function MyMatchesPage() {
 
         {matches.map((m) => (
           <div key={m.match_id} className="mb-4 flex items-center gap-4 rounded-[24px] border border-[#ffdbe6] bg-white/88 p-5 shadow-[0_16px_42px_rgba(57,85,121,.12)] backdrop-blur-xl">
-            <Postit text={m.one_liner} color={m.color} size="sm" rotation={1} />
+            <PetalCard text={m.one_liner} color={m.color} size="sm" rotation={1} />
             <div className="flex-1">
               <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">Instagram</div>
               <div className="flex items-center gap-2">
