@@ -15,7 +15,7 @@ export default function EndPage() {
 
     const checkSession = async () => {
       try {
-        const response = await fetch("/api/session", { cache: "no-store" });
+        const response = await fetch("/api/session/status", { cache: "no-store" });
         if (!response.ok) return;
 
         const session = (await response.json()) as { in_postsession?: boolean };

@@ -33,6 +33,10 @@ export default function BoardPage() {
 
   const loadSession = useCallback(async () => {
     const response = await fetch("/api/session");
+    if (response.status === 401 || response.status === 403) {
+      router.replace("/");
+      return false;
+    }
     if (!response.ok) {
       setLoadFailed(true);
       return false;
@@ -41,7 +45,7 @@ export default function BoardPage() {
     setSessionState((await response.json()) as SessionState);
     setLoadFailed(false);
     return true;
-  }, []);
+  }, [router]);
 
   const loadAll = useCallback(async () => {
     const [sRes, mc, mm] = await Promise.all([
@@ -49,6 +53,10 @@ export default function BoardPage() {
       fetch("/api/cards/me").then((r) => (r.ok ? r.json() : { card: null })),
       fetch("/api/matches/me").then((r) => (r.ok ? r.json() : { matches: [], slot: null })),
     ]);
+    if (sRes.status === 401 || sRes.status === 403) {
+      router.replace("/");
+      return;
+    }
     if (!sRes.ok) {
       // 예전에는 에러 응답 객체를 그대로 state에 넣어서, 렌더 중
       // state.config.threshold_male 접근이 TypeError로 터졌다.
@@ -60,7 +68,7 @@ export default function BoardPage() {
     setSessionState(s);
     setMyCard(mc.card ?? null);
     setHasUsedSlot(mm.slot ? mm.slot.remaining <= 0 : ((mm.matches ?? []) as MyMatch[]).length > 0);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadAll();

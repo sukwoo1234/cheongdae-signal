@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Postit } from "@/components/Postit";
 import { CampusShell } from "@/components/CampusShell";
+import { SignalLoading } from "@/components/SignalLoading";
 import type { PostitColor } from "@/lib/constants";
 
 interface MatchRow {
@@ -25,7 +26,7 @@ export default function MyMatchesPage() {
       .then((d) => setMatches(d.matches ?? []));
   }, []);
 
-  if (!matches) return <main className="flex min-h-screen items-center justify-center bg-[#edf5ff] text-sm text-[#8390a2]">매칭을 불러오는 중…</main>;
+  if (!matches) return <SignalLoading message="저장된 매칭을 확인하고 있어요." />;
 
   return (
     <CampusShell className="min-h-[1080px] sm:min-h-screen">

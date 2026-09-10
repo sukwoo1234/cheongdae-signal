@@ -8,6 +8,7 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
+import { SignalLoading } from "@/components/SignalLoading";
 import { ONELINER_MAX_LENGTH, PostitColor } from "@/lib/constants";
 import type { MyCard } from "@/lib/types";
 
@@ -70,7 +71,7 @@ export default function MyCardPage() {
     router.push("/");
   }
 
-  if (!card) return <main className="flex min-h-screen items-center justify-center bg-[#edf5ff] text-sm text-[#8390a2]">카드를 불러오는 중…</main>;
+  if (!card) return <SignalLoading message="내 카드를 준비하고 있어요." />;
 
   return (
     <CampusShell className="min-h-[1250px] sm:min-h-screen">

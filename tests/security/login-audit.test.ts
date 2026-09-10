@@ -10,6 +10,7 @@ import { POST as sendLink } from "@/app/api/auth/magic-link/route";
 import { POST as banUser } from "@/app/api/admin/users/[id]/ban/route";
 import { getActiveUser, getAdminContext } from "@/lib/auth";
 import { POST as logout } from "@/app/api/auth/logout/route";
+import { GET as getSession } from "@/app/api/session/route";
 
 const headers = { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" };
 const student = {
@@ -167,6 +168,16 @@ describe("login security boundary", () => {
   it("denies password-only sessions at the active-user boundary", async () => {
     serverMock(student, "aal1", "password");
     expect((await getActiveUser()).denial).toBe("UNAUTHENTICATED");
+  });
+
+  it("does not expose session configuration or participant counts without an active session", async () => {
+    const server = serverMock(student, "aal1", "password");
+    (server as typeof server & { rpc: ReturnType<typeof vi.fn> }).rpc = vi.fn();
+
+    const response = await getSession();
+
+    expect(response.status).toBe(401);
+    expect(server.rpc).not.toHaveBeenCalled();
   });
 
   it("fails closed when the profile/ban lookup fails", async () => {

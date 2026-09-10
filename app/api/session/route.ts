@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { denialResponse, getActiveUser } from "@/lib/auth";
 
 interface GenderCounts {
   male: number;
@@ -7,7 +7,9 @@ interface GenderCounts {
 }
 
 export async function GET() {
-  const supabase = await createClient();
+  const { supabase, user, denial } = await getActiveUser();
+  if (denial) return denialResponse(denial);
+  if (!user) return denialResponse("UNAUTHENTICATED");
 
   // 인원 집계는 반드시 RPC로 해야 한다. users에는 "본인 행만" RLS가 걸려 있어서
   // 사용자 컨텍스트로 count하면 항상 자기 자신 1명(또는 0명)만 세어진다.

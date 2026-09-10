@@ -49,7 +49,19 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0016_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0017_'));
+const anonymousSessionPrivileges = (await db.query(`
+  select
+    has_table_privilege('anon', 'public.session_config', 'select') as config,
+    has_function_privilege('anon', 'public.gender_counts()', 'execute') as counts,
+    has_function_privilege('anon', 'public.board_is_open()', 'execute') as board_open
+`)).rows[0];
+secured(
+  'anonymous clients cannot read session metadata or participant counts directly',
+  !anonymousSessionPrivileges.config &&
+    !anonymousSessionPrivileges.counts &&
+    !anonymousSessionPrivileges.board_open,
+);
 const purgeDefinition = (await db.query(
   "select pg_get_functiondef('public.purge_current_event_data()'::regprocedure) as definition",
 )).rows[0].definition.toLowerCase();
