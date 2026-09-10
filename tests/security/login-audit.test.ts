@@ -50,7 +50,10 @@ function adminMock() {
     rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
     auth: {
       signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
-      admin: { updateUserById: vi.fn().mockResolvedValue({ error: null }) },
+      admin: {
+        updateUserById: vi.fn().mockResolvedValue({ error: null }),
+        deleteUser: vi.fn().mockResolvedValue({ error: null }),
+      },
     },
   };
   mocks.admin.mockReturnValue(admin);
@@ -194,7 +197,7 @@ describe("login security boundary", () => {
     expect((await getAdminContext()).user).toBeNull();
   });
 
-  it("bans the Auth user instead of treating a UUID as a session token", async () => {
+  it("deletes and event-blocks a banned user instead of treating a UUID as a session token", async () => {
     const { admin } = adminMock();
     serverMock(
       { ...student, id: process.env.ADMIN_USER_ID!, email: "admin@example.com" },
@@ -209,16 +212,14 @@ describe("login security boundary", () => {
       p_user_id: student.id,
       p_reason: "admin_ban",
     });
-    expect(admin.auth.admin.updateUserById).toHaveBeenCalledWith(student.id, {
-      ban_duration: "876000h",
-    });
+    expect(admin.auth.admin.deleteUser).toHaveBeenCalledWith(student.id);
     expect(response.status).toBe(200);
   });
 
-  it("deletes only the selected card without banning its user", async () => {
+  it("deletes a participant account without adding an event ban", async () => {
     const { admin, query } = adminMock();
     query.maybeSingle.mockResolvedValueOnce({
-      data: { id: "20000000-0000-4000-8000-000000000001" },
+      data: { user_id: student.id },
       error: null,
     });
     serverMock(
@@ -232,7 +233,7 @@ describe("login security boundary", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(query.delete).toHaveBeenCalledOnce();
+    expect(admin.auth.admin.deleteUser).toHaveBeenCalledWith(student.id);
     expect(admin.rpc).not.toHaveBeenCalled();
     expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
   });

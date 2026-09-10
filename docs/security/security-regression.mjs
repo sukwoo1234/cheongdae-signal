@@ -79,6 +79,7 @@ secured(
 
 const A = '10000000-0000-4000-8000-000000000001';
 const A2 = '10000000-0000-4000-8000-000000000006';
+const A3 = '10000000-0000-4000-8000-000000000007';
 const B = '10000000-0000-4000-8000-000000000002';
 const C = '10000000-0000-4000-8000-000000000003';
 const D = '10000000-0000-4000-8000-000000000004';
@@ -261,6 +262,15 @@ await expectDbError(
 );
 
 await owner();
+await db.query('delete from auth.users where id=$1', [A2]);
+await db.query('insert into auth.users(id,email,email_confirmed_at) values ($1,$2,now())', [A3, 'a@cju.ac.kr']);
+await expectDbError(
+  'an event-blocked email cannot rejoin after its Auth account is deleted',
+  () => register(eventId, A3, 'a@cju.ac.kr', subjectA),
+  'PARTICIPANT_BANNED',
+);
+
+await owner();
 await db.query("update auth.users set email='external@example.invalid' where id=$1", [C]);
 await identity(C, 'external@example.invalid');
 secured(
@@ -282,7 +292,7 @@ const nextEventId = (await db.query('select public.finish_event_purge() as id'))
 secured('finishing a purge rotates the event identifier', nextEventId !== eventId);
 
 const nextSubjectA = 'e'.repeat(64);
-const nextRegistration = await register(nextEventId, A2, 'a@cju.ac.kr', nextSubjectA);
+const nextRegistration = await register(nextEventId, A3, 'a@cju.ac.kr', nextSubjectA);
 secured(
   'a new event starts the same participant with one unused slot',
   nextRegistration.rows[0].allowance === 1 && nextRegistration.rows[0].used === 0,

@@ -197,27 +197,27 @@ export default function AdminConsole() {
   }
 
   async function removeCard(id: string) {
-    if (!confirm("이 카드만 삭제할까요? 사용자는 차단되지 않으며 새 카드를 만들 수 있습니다. 기존 매칭 목록에서는 카드가 사라지지만 이미 사용한 선택 기회는 복구되지 않습니다.")) return;
+    if (!confirm("이 사용자를 삭제해 내보낼까요? 같은 이메일로 이번 이벤트에 다시 참여할 수 있지만 이미 사용한 선택 기회는 초기화되지 않습니다.")) return;
     const response = await fetch(`/api/admin/cards/${id}/remove`, {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
     if (!response.ok) {
-      alert("카드를 삭제하지 못했습니다. 다시 시도해주세요.");
+      alert("사용자를 삭제하지 못했습니다. 다시 시도해주세요.");
       return;
     }
     await doSearch();
     await loadStats(false);
   }
 
-  async function deleteAndBanCard(id: string) {
-    if (!confirm("이 카드를 삭제하고 해당 사용자를 차단할까요?")) return;
+  async function banAndDeleteCard(id: string) {
+    if (!confirm("이 사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단할까요?")) return;
     const response = await fetch(`/api/admin/cards/${id}/delete`, {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
     if (!response.ok) {
-      alert("카드 삭제·차단을 완료하지 못했습니다. 다시 확인해주세요.");
+      alert("사용자 차단을 완료하지 못했습니다. 다시 확인해주세요.");
       return;
     }
     await doSearch();
@@ -247,13 +247,17 @@ export default function AdminConsole() {
   }
 
   async function banUser(userId: string) {
-    if (!confirm("이 사용자를 차단할까요?")) return;
+    if (!confirm("이 사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단할까요?")) return;
     const response = await fetch(`/api/admin/users/${userId}/ban`, {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
-    setUserMessage(response.ok ? "사용자를 차단했습니다." : "처리하지 못했습니다.");
-    if (response.ok) await loadUser();
+    if (response.ok) {
+      setUserInfo(null);
+      setUserMessage("사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단했습니다.");
+    } else {
+      setUserMessage("처리하지 못했습니다.");
+    }
   }
 
   async function wipeData() {
@@ -434,7 +438,7 @@ export default function AdminConsole() {
 
         <div className="mt-5 grid gap-5 xl:grid-cols-2">
           <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#111216]">
-            <SectionHeader eyebrow="Moderation" title="카드 관리" description="소개 문구로 검색해 숨기거나 삭제·차단합니다." />
+            <SectionHeader eyebrow="Moderation" title="카드 관리" description="숨기기, 재가입 가능한 삭제, 이번 이벤트 차단을 구분해 처리합니다." />
             <div className="p-4 sm:p-5">
               <SearchBar value={search} onChange={setSearch} onSubmit={() => void doSearch()} placeholder="소개 문구 검색" buttonLabel={searching ? "검색 중…" : "검색"} />
               <div className="admin-scrollbar mt-4 max-h-80 space-y-2 overflow-auto">
@@ -450,8 +454,8 @@ export default function AdminConsole() {
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button onClick={() => void hideCard(card.id)} className="rounded-md border border-white/[0.08] px-2.5 py-1.5 text-[9px] font-medium text-[#a4a4ad] hover:bg-white/[0.04]">{card.hidden_by_admin ? "다시 공개" : "숨기기"}</button>
-                      <button onClick={() => void removeCard(card.id)} className="rounded-md border border-[#4e4230] px-2.5 py-1.5 text-[9px] font-medium text-[#e0b86d] hover:bg-[#221d14]">삭제만</button>
-                      <button onClick={() => void deleteAndBanCard(card.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185] hover:bg-[#251216]">삭제 + 차단</button>
+                      <button onClick={() => void removeCard(card.id)} className="rounded-md border border-[#4e4230] px-2.5 py-1.5 text-[9px] font-medium text-[#e0b86d] hover:bg-[#221d14]">삭제</button>
+                      <button onClick={() => void banAndDeleteCard(card.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185] hover:bg-[#251216]">차단</button>
                     </div>
                   </div>
                 ))}

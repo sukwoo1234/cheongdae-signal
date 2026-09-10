@@ -21,12 +21,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (ledgerBanError) return NextResponse.json({ error: "BAN_FAILED" }, { status: 500 });
 
-  // admin.signOut은 UUID가 아니라 사용자 JWT를 요구한다. 계정 자체를 Auth에서
-  // ban하고, 이미 발급된 access token은 DB의 banned 검사로 즉시 거부한다.
-  const { error: authBanError } = await admin.auth.admin.updateUserById(id, {
-    ban_duration: "876000h",
-  });
-  if (authBanError) return NextResponse.json({ error: "AUTH_BAN_FAILED" }, { status: 502 });
+  // 이메일·행사 원장을 먼저 차단한 뒤 계정을 삭제한다. 이미 발급된 토큰은
+  // 프로필 삭제와 원장 차단 양쪽에서 즉시 거부되고 같은 이메일 재가입도 막힌다.
+  const { error: authDeleteError } = await admin.auth.admin.deleteUser(id);
+  if (authDeleteError) return NextResponse.json({ error: "AUTH_DELETE_FAILED" }, { status: 502 });
 
   return NextResponse.json({ ok: true });
 }
