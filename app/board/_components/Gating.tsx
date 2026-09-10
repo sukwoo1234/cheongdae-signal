@@ -1,7 +1,7 @@
 "use client";
 
-import { Postit } from "@/components/Postit";
 import { CampusShell } from "@/components/CampusShell";
+import { PetalCard } from "@/components/PetalCard";
 import type { PostitColor } from "@/lib/constants";
 import type { SessionState } from "@/lib/types";
 
@@ -60,7 +60,7 @@ export function Gating({ state, myCard }: Props) {
           <>
             <div className="mb-3 text-sm font-extrabold text-[#3f5677]">▣ &nbsp;내 카드 <span className="font-medium text-[#8293aa]">(등록 완료)</span></div>
             <div className="mb-5 flex justify-center rounded-2xl bg-white py-4">
-              <Postit text={myCard.one_liner} color={myCard.color} rotation={-2} size="md" />
+              <PetalCard text={myCard.one_liner} color={myCard.color} rotation={-2} size="md" />
             </div>
           </>
         )}
