@@ -11,7 +11,7 @@ import { CountdownBanner } from "@/components/CountdownBanner";
 import { SignalLoading } from "@/components/SignalLoading";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
-import type { SessionState, MyCard, MyMatch } from "@/lib/types";
+import type { SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
 
 interface BoardCard {
   id: string;
@@ -25,6 +25,7 @@ export default function BoardPage() {
   const [pending, setPending] = useState<BoardCard | null>(null);
   const [revealed, setRevealed] = useState<{ card: BoardCard; instagramId: string } | null>(null);
   const [revealing, setRevealing] = useState(false);
+  const [slot, setSlot] = useState<SlotState | null>(null);
   const [hasUsedSlot, setHasUsedSlot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -67,6 +68,7 @@ export default function BoardPage() {
     setLoadFailed(false);
     setSessionState(s);
     setMyCard(mc.card ?? null);
+    setSlot(mm.slot ?? null);
     setHasUsedSlot(mm.slot ? mm.slot.remaining <= 0 : ((mm.matches ?? []) as MyMatch[]).length > 0);
   }, [router]);
 
@@ -76,20 +78,24 @@ export default function BoardPage() {
 
   // 세션 상태는 보드가 열린 뒤에도 계속 바뀐다. 임계점 충족뿐 아니라 종료 시각과
   // 관리자의 강제 잠금도 새로고침 없이 반영해야 한다. 카드·매칭까지 매번 읽으면
-  // 참가자가 많을 때 요청량이 커지므로 가벼운 /api/session만 폴링한다.
+  // 참가자가 많을 때 요청량이 커지므로 주기적으로는 가벼운 /api/session만 읽고,
+  // 화면으로 돌아올 때만 선택 기회를 포함한 전체 상태를 다시 맞춘다.
   useEffect(() => {
-    const refreshWhenVisible = () => {
+    const refreshSessionWhenVisible = () => {
       if (document.visibilityState === "visible") void loadSession();
     };
-    const t = setInterval(refreshWhenVisible, 5000);
-    window.addEventListener("focus", refreshWhenVisible);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const refreshAllWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadAll();
+    };
+    const t = setInterval(refreshSessionWhenVisible, 5000);
+    window.addEventListener("focus", refreshAllWhenVisible);
+    document.addEventListener("visibilitychange", refreshAllWhenVisible);
     return () => {
       clearInterval(t);
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshAllWhenVisible);
+      document.removeEventListener("visibilitychange", refreshAllWhenVisible);
     };
-  }, [loadSession]);
+  }, [loadAll, loadSession]);
 
   useEffect(() => {
     if (sessionState?.in_postsession) router.replace("/end");
@@ -111,7 +117,13 @@ export default function BoardPage() {
     if (res.ok) {
       setRevealed({ card: pending, instagramId: data.instagram_id });
       setPending(null);
-      setHasUsedSlot(true);
+      if (slot) {
+        const remaining = Math.max(0, slot.remaining - 1);
+        setSlot({ ...slot, used: slot.used + 1, remaining });
+        setHasUsedSlot(remaining <= 0);
+      } else {
+        setHasUsedSlot(true);
+      }
     } else {
       const msgs: Record<string, string> = {
         SLOT_ALREADY_USED: "이미 슬롯을 사용했어요",
@@ -168,6 +180,18 @@ export default function BoardPage() {
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/board" className="hidden items-center gap-2 text-xs font-extrabold text-[#071b33] sm:flex"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#071b33] text-[10px] text-white">S</span>청대 시그널</Link>
             <RatioCounter initialMale={sessionState.counts.male} initialFemale={sessionState.counts.female} />
+            {slot && (
+              <span
+                aria-label={`선택 기회 ${slot.remaining}회 남음`}
+                className={`inline-flex shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold ${
+                  slot.remaining > 0
+                    ? "border-[#cfdcf0] bg-[#f3f7fd] text-[#45658e]"
+                    : "border-[#e1e6ed] bg-[#f6f7f9] text-[#8a96a6]"
+                }`}
+              >
+                <span className="hidden min-[520px]:inline">선택&nbsp;</span>기회 {slot.remaining}회<span className="hidden sm:inline">&nbsp;남음</span>
+              </span>
+            )}
           </div>
           <nav className="flex shrink-0 gap-1 text-xs font-semibold">
             <Link href="/my/matches" className="rounded-lg bg-[#071b33] px-3 py-2 text-white">내 매칭</Link>
