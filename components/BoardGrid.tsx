@@ -36,7 +36,7 @@ export function BoardGrid({ onCardClick, reloadKey }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-0 gap-y-3 overflow-hidden px-0 py-8 sm:grid-cols-3 sm:gap-x-3 sm:px-5 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-0 gap-y-3 overflow-x-clip overflow-y-visible px-0 pb-14 pt-8 sm:grid-cols-3 sm:gap-x-3 sm:px-5 md:grid-cols-4 lg:grid-cols-5">
       {cards.map((c, index) => (
         <div
           key={c.id}

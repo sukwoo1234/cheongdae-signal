@@ -203,9 +203,15 @@ export default function BoardPage() {
 
       <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
         <div className="mb-4 px-1 text-center sm:text-left">
-          <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대가 등록한 연락처가 공개됩니다.</p>
+          <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대가 등록한 정보가 공개됩니다.</p>
           <h1 className="signal-handwriting mt-7 text-[38px] font-normal leading-[1.12] tracking-normal text-[#4e6f9b] sm:text-[48px]">
-            좋은 인연이<br className="sm:hidden" /> <span className="whitespace-nowrap">기다리고 있어요 ♡</span>
+            좋은 인연이<br className="sm:hidden" />{" "}
+            <span className="whitespace-nowrap">
+              기다리고 있어요{" "}
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" className="inline-block h-[.9em] w-[.9em] -translate-y-[.04em] align-baseline overflow-visible">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </h1>
           <p className="mt-2 text-[9px] font-semibold tracking-[0.28em] text-[#7187a7]">CHEONGJU UNIVERSITY</p>
         </div>
