@@ -53,6 +53,12 @@ export default function AuthCallbackPage() {
 
       setLoading(true);
       try {
+        // createBrowserClient는 PKCE code가 주소에 있으면 초기화 과정에서 자동으로
+        // 교환한다. 아래의 명시적 교환과 동시에 실행되면 일회용 code가 두 번
+        // 소비되어 간헐적으로 로그인 화면으로 돌아간다. 자격 증명은 이미 ref에
+        // 보관했으므로 클라이언트를 만들기 전에 주소창에서 먼저 제거한다.
+        window.history.replaceState({}, "", "/auth/callback");
+
         const supabase = createClient();
         let authError: unknown = null;
 
@@ -77,9 +83,6 @@ export default function AuthCallbackPage() {
           router.replace("/?error=auth_failed");
           return;
         }
-
-        // 토큰은 세션 확립 직후 주소창에서 제거한다.
-        window.history.replaceState({}, "", "/auth/callback");
 
         const res = await fetch("/api/auth/finish", {
           method: "POST",

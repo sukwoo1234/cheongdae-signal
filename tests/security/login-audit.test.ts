@@ -12,6 +12,7 @@ import { getActiveUser, getAdminContext } from "@/lib/auth";
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { GET as getSession } from "@/app/api/session/route";
 import { POST as removeCard } from "@/app/api/admin/cards/[id]/remove/route";
+import { isSecureCookieEnvironment } from "@/lib/supabase/cookie-options";
 
 const headers = { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" };
 const student = {
@@ -100,6 +101,11 @@ afterEach(() => {
 });
 
 describe("login security boundary", () => {
+  it("keeps authentication cookies Secure in production even if the site URL is misconfigured", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://misconfigured.invalid");
+    expect(isSecureCookieEnvironment()).toBe(true);
+  });
+
   it("rejects an absent production CAPTCHA before any email is sent", async () => {
     const { admin } = adminMock();
     expect((await sendLink(request(student.email, "192.0.2.1", ""))).status).toBe(400);

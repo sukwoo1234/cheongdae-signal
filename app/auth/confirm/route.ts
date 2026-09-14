@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { finishSignIn } from "@/lib/auth-flow";
 import { isLoginEmailOtpType } from "@/lib/auth-email";
 
 /**
- * Supabase 이메일 템플릿이 `token_hash` 방식으로 설정된 경우의 복귀 지점.
- * 세션 확립 이후 처리는 /auth/callback 과 완전히 동일하게 finishSignIn()을 쓴다.
+ * 이전 이메일 템플릿의 호환 경로.
+ * GET 요청에서 OTP를 소비하면 메일 보안 스캐너가 사용자가 누르기 전에 링크를
+ * 무효화할 수 있으므로, 실제 검증은 확인 UI가 있는 /auth/callback 에서 수행한다.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -17,11 +16,9 @@ export async function GET(req: Request) {
     redirect("/?error=invalid_link");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-  if (error) {
-    redirect("/?error=verify_failed");
-  }
-
-  redirect(await finishSignIn(state));
+  const callback = new URL("/auth/callback", url.origin);
+  callback.searchParams.set("state", state);
+  callback.searchParams.set("token_hash", token_hash);
+  callback.searchParams.set("type", type);
+  redirect(callback.toString());
 }

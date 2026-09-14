@@ -60,4 +60,8 @@ describe("authentication method and login state boundary", () => {
     expect(matchesLoginState(state, `${state}x`)).toBe(false);
     expect(matchesLoginState(state, undefined)).toBe(false);
   });
+
+  it("rejects equal-character states with different UTF-8 byte lengths without throwing", () => {
+    expect(matchesLoginState("a".repeat(43), "가".repeat(43))).toBe(false);
+  });
 });

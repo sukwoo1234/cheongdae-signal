@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,30 @@ export default function Landing() {
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaKey, setCaptchaKey] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("error");
+    const errorCode = params.get("error_code");
+    if (!authError) return;
+
+    const messages: Record<string, string> = {
+      invalid_link: "로그인 링크가 올바르지 않아요. 새 링크를 요청해주세요.",
+      verify_failed: "로그인 링크가 만료됐거나 이미 사용됐어요. 새 링크를 요청해주세요.",
+      auth_failed: "로그인을 완료하지 못했어요. 새 링크를 요청해주세요.",
+      domain: "청주대학교 이메일 계정만 참여할 수 있어요.",
+      banned: "이번 행사에 참여할 수 없는 계정이에요.",
+      access_denied: "로그인 링크가 만료됐거나 이미 사용됐어요. 새 링크를 요청해주세요.",
+    };
+    setError(
+      errorCode === "otp_expired"
+        ? "로그인 링크가 만료됐거나 이미 사용됐어요. 새 링크를 요청해주세요."
+        : (messages[authError] ?? "로그인을 완료하지 못했어요. 다시 시도해주세요.")
+    );
+
+    // Supabase 오류 설명과 일회용 인증 정보가 주소창에 계속 남지 않게 한다.
+    window.history.replaceState({}, "", "/");
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

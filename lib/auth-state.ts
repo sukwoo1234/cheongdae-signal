@@ -19,7 +19,11 @@ export function loginStateCookieOptions(maxAge = LOGIN_STATE_TTL_SECONDS) {
 }
 
 export function matchesLoginState(expected: string | undefined, provided: string | undefined): boolean {
-  if (!expected || !provided || expected.length !== provided.length) return false;
+  if (!expected || !provided) return false;
 
-  return timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(provided, "utf8"));
+  const expectedBytes = Buffer.from(expected, "utf8");
+  const providedBytes = Buffer.from(provided, "utf8");
+  if (expectedBytes.length !== providedBytes.length) return false;
+
+  return timingSafeEqual(expectedBytes, providedBytes);
 }
