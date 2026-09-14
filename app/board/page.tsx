@@ -10,6 +10,7 @@ import { RevealModal } from "@/components/RevealModal";
 import { CountdownBanner } from "@/components/CountdownBanner";
 import { SignalLoading } from "@/components/SignalLoading";
 import { SignalBrand } from "@/components/SignalBrand";
+import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
 import type { SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
@@ -208,9 +209,7 @@ export default function BoardPage() {
             좋은 인연이<br className="sm:hidden" />{" "}
             <span className="whitespace-nowrap">
               기다리고 있어요{" "}
-              <svg aria-hidden viewBox="0 0 24 24" fill="none" className="inline-block h-[.9em] w-[.9em] -translate-y-[.04em] align-baseline overflow-visible">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <HandwrittenHeart className="inline-block h-[.92em] w-[1.12em] -translate-y-[.02em] align-baseline overflow-visible" />
             </span>
           </h1>
           <p className="mt-2 text-[9px] font-semibold tracking-[0.28em] text-[#7187a7]">CHEONGJU UNIVERSITY</p>

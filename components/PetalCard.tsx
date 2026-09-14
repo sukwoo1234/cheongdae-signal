@@ -32,7 +32,7 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
         aria-label={onClick ? `${text} 카드 선택` : undefined}
       >
         <PetalArtwork color={color} className="absolute inset-0 h-full w-full" style={{ filter: "drop-shadow(0 14px 18px rgba(51,82,123,.13))" }} />
-        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] text-[1.35em] font-normal leading-[1.3]">
+        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] text-[1.6em] font-normal leading-[1.22]">
           <span className="block w-full text-center [overflow-wrap:anywhere] [word-break:keep-all]">
             {text}
           </span>
