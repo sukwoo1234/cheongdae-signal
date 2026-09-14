@@ -21,7 +21,7 @@ export default function Privacy() {
           <li>이메일 주소 (@cju.ac.kr) — 본인 확인 및 로그인</li>
           <li>성별 (남/여) — 이성 카드 노출을 위한 필수 항목</li>
           <li>한 줄 소개 (최대 20자)</li>
-          <li>인스타그램 ID</li>
+          <li>연락처 (인스타그램 ID 또는 휴대전화 번호 중 이용자가 선택한 항목)</li>
         </ul>
         <p className="mb-2 font-semibold text-gray-800">서비스 이용 과정에서 자동 생성·수집되는 정보</p>
         <ul className="list-disc pl-5 space-y-1">
@@ -30,7 +30,7 @@ export default function Privacy() {
           <li>인증 및 세션 유지를 위한 쿠키</li>
         </ul>
         <p className="mt-2 text-xs text-gray-500">
-          주민등록번호, 연락처, 실명 등 위 항목 외의 개인정보는 수집하지 않습니다.
+          주민등록번호, 실명 등 위 항목 외의 개인정보는 수집하지 않습니다.
         </p>
       </section>
 
@@ -39,7 +39,7 @@ export default function Privacy() {
         <ul className="list-disc pl-5 space-y-1">
           <li>청주대학교 재학생 여부 확인 및 로그인 인증</li>
           <li>카드 게시 및 이성 이용자에게 한 줄 소개 노출</li>
-          <li>1인 1회에 한한 인스타그램 ID 공개(매칭)</li>
+          <li>선택 기회 범위 내에서 이용자가 등록한 연락처 공개(매칭)</li>
           <li>부적절한 게시물에 대한 운영자의 사후 조치</li>
         </ul>
         <p className="mt-2">위 목적 외의 용도로는 이용하지 않으며, 마케팅·광고에 활용하지 않습니다.</p>
@@ -52,7 +52,7 @@ export default function Privacy() {
           보유합니다. 폐기는 <strong>행사 종료 후 7일 이내</strong>에 실행하는 것을 원칙으로 합니다.
         </p>
         <p className="mt-2">
-          이용자가 서비스 내에서 직접 삭제를 요청하면 계정, 이메일, 카드, 인스타그램 ID와
+          이용자가 서비스 내에서 직접 삭제를 요청하면 계정, 이메일, 카드, 등록한 연락처와
           매칭 상세정보는 즉시 파기합니다. 다만 동일 행사 내 탈퇴·재가입을 이용한 중복 열람을
           방지하기 위해 이메일 원문을 저장하지 않는 행사별 가명 식별값과 선택 기회 사용·공개
           횟수는 해당 행사 데이터 폐기 시점까지만 분리 보관한 뒤 함께 파기합니다.
@@ -64,7 +64,7 @@ export default function Privacy() {
         <p>
           서비스는 이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만 매칭 기능의 성격상,
           이용자가 등록한 <strong>한 줄 소개는 이성 이용자에게 공개</strong>되며,
-          <strong> 인스타그램 ID는 슬롯을 사용해 해당 카드를 선택한 이용자에게만 공개</strong>되며,
+          <strong> 등록한 연락처는 선택 기회를 사용해 해당 카드를 선택한 이용자에게만 공개</strong>되며,
           운영자가 카드별 공개 인원 상한을 설정한 경우에는 그 범위까지만 공개됩니다.
           이는 서비스의 본질적 기능이며, 카드 등록 시 이에 동의한 것으로 봅니다.
         </p>
@@ -142,7 +142,7 @@ export default function Privacy() {
             <strong>열람·정정</strong>: 로그인 후 &quot;내 카드&quot; 페이지에서 직접 확인·수정
           </li>
           <li>
-            <strong>삭제</strong>: &quot;내 카드&quot; 페이지의 삭제 버튼으로 계정·카드·인스타그램 ID와
+            <strong>삭제</strong>: &quot;내 카드&quot; 페이지의 삭제 버튼으로 계정·카드·등록한 연락처와
             매칭 상세정보를 즉시 파기. 행사별 중복 이용 방지 기록은 3항의 기간 후 파기
           </li>
           <li>
@@ -150,7 +150,7 @@ export default function Privacy() {
           </li>
         </ul>
         <p className="mt-2 text-xs text-gray-500">
-          이미 다른 이용자에게 공개된 인스타그램 ID는 기술적으로 회수할 수 없습니다.
+          이미 다른 이용자에게 공개된 연락처는 기술적으로 회수할 수 없습니다.
         </p>
       </section>
 
@@ -159,7 +159,7 @@ export default function Privacy() {
         <ul className="list-disc pl-5 space-y-1">
           <li>전 구간 HTTPS 암호화 통신</li>
           <li>데이터베이스 행 수준 접근 제어(RLS)를 통한 접근 권한 최소화</li>
-          <li>인스타그램 ID는 슬롯을 사용한 이용자에게만 공개되도록 컬럼 단위 접근 제한</li>
+          <li>등록한 연락처는 선택 기회를 사용한 이용자에게만 공개되도록 컬럼 단위 접근 제한</li>
           <li>운영자 계정 접근 제한 및 개인정보 취급자 최소화(운영자 1인)</li>
         </ul>
       </section>
@@ -199,7 +199,7 @@ export default function Privacy() {
       <section className="mb-6">
         <h2 className="font-bold text-base mb-2">11. 처리방침의 변경</h2>
         <p>
-          이 개인정보 처리방침은 2026년 8월 7일부터 적용됩니다. 내용의 추가·삭제·수정이 있을 경우
+          이 개인정보 처리방침은 2026년 9월 14일부터 적용됩니다. 내용의 추가·삭제·수정이 있을 경우
           서비스 내 공지를 통해 알립니다.
         </p>
       </section>

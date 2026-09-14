@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
+import { validateOneLiner, validateContactValue, validateColor } from "@/lib/validation/card";
 import { containsPhoneNumber } from "@/lib/validation/phone";
 
 describe("validateOneLiner", () => {
@@ -48,21 +48,27 @@ describe("containsPhoneNumber — 우회 표기", () => {
   });
 });
 
-describe("validateInstagramId", () => {
+describe("validateContactValue", () => {
   it("strips a leading @ and surrounding space", () => {
-    expect(validateInstagramId("  @cju_signal ")).toEqual({ value: "cju_signal" });
+    expect(validateContactValue("  @cju_signal ")).toEqual({ value: "cju_signal" });
   });
 
-  it("rejects invalid ids", () => {
-    expect(validateInstagramId("").error).toBe("INVALID_INSTAGRAM_ID");
-    expect(validateInstagramId("has space").error).toBe("INVALID_INSTAGRAM_ID");
-    expect(validateInstagramId("한글아이디").error).toBe("INVALID_INSTAGRAM_ID");
-    expect(validateInstagramId("a".repeat(31)).error).toBe("INVALID_INSTAGRAM_ID");
-    expect(validateInstagramId(null).error).toBe("INVALID_INSTAGRAM_ID");
+  it("accepts and normalizes Korean mobile phone numbers", () => {
+    expect(validateContactValue("010-1234-5678")).toEqual({ value: "01012345678" });
+    expect(validateContactValue("０１０ １２３４ ５６７８")).toEqual({ value: "01012345678" });
+  });
+
+  it("rejects invalid contact values", () => {
+    expect(validateContactValue("").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("has space").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("한글아이디").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("010-12-34").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("a".repeat(31)).error).toBe("INVALID_CONTACT");
+    expect(validateContactValue(null).error).toBe("INVALID_CONTACT");
   });
 
   it("accepts a 30-char id", () => {
-    expect(validateInstagramId("a".repeat(30)).error).toBeUndefined();
+    expect(validateContactValue("a".repeat(30)).error).toBeUndefined();
   });
 });
 

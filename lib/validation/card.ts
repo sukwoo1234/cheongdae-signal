@@ -1,4 +1,4 @@
-import { sanitizeInstagramId, isValidInstagramId } from "@/lib/validation/instagram";
+import { sanitizeContactValue, isValidContactValue } from "@/lib/validation/contact";
 import { containsProfanity } from "@/lib/validation/profanity";
 import { containsPhoneNumber } from "@/lib/validation/phone";
 import { ONELINER_MAX_LENGTH, POSTIT_COLORS, type PostitColor } from "@/lib/constants";
@@ -7,7 +7,7 @@ export type CardFieldError =
   | "INVALID_ONELINER"
   | "PROFANITY_DETECTED"
   | "PHONE_DETECTED"
-  | "INVALID_INSTAGRAM_ID"
+  | "INVALID_CONTACT"
   | "INVALID_COLOR";
 
 type Result<T> =
@@ -26,10 +26,10 @@ export function validateOneLiner(raw: unknown): Result<string> {
   return { value };
 }
 
-export function validateInstagramId(raw: unknown): Result<string> {
-  if (typeof raw !== "string") return { error: "INVALID_INSTAGRAM_ID" };
-  const value = sanitizeInstagramId(raw);
-  if (!isValidInstagramId(value)) return { error: "INVALID_INSTAGRAM_ID" };
+export function validateContactValue(raw: unknown): Result<string> {
+  if (typeof raw !== "string") return { error: "INVALID_CONTACT" };
+  const value = sanitizeContactValue(raw);
+  if (!isValidContactValue(value)) return { error: "INVALID_CONTACT" };
   return { value };
 }
 

@@ -6,6 +6,7 @@ import { CampusShell } from "@/components/CampusShell";
 import { PetalCard } from "@/components/PetalCard";
 import { SignalLoading } from "@/components/SignalLoading";
 import type { PostitColor } from "@/lib/constants";
+import { contactKind, formatContactValue } from "@/lib/validation/contact";
 
 interface MatchRow {
   match_id: string;
@@ -44,16 +45,19 @@ export default function MyMatchesPage() {
           <div className="rounded-[24px] border border-dashed border-[#ccd6e2] bg-white/75 px-6 py-16 text-center backdrop-blur"><p className="text-sm font-semibold text-[#526176]">아직 선택한 카드가 없어요.</p><p className="mt-1 text-xs text-[#8390a2]">보드에서 마음 가는 카드 한 장을 골라보세요.</p></div>
         )}
 
-        {matches.map((m) => (
+        {matches.map((m) => {
+          const kind = contactKind(m.instagram_id);
+          const formattedContact = formatContactValue(m.instagram_id);
+          return (
           <div key={m.match_id} className="mb-4 flex items-center gap-4 rounded-[24px] border border-[#ffdbe6] bg-white/88 p-5 shadow-[0_16px_42px_rgba(57,85,121,.12)] backdrop-blur-xl">
             <PetalCard text={m.one_liner} color={m.color} size="sm" rotation={1} />
             <div className="flex-1">
-              <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">Instagram</div>
+              <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">{kind === "phone" ? "Phone" : "Instagram"}</div>
               <div className="flex items-center gap-2">
-                <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">@{m.instagram_id}</span>
+                <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">{formattedContact}</span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(m.instagram_id);
+                    navigator.clipboard.writeText(formattedContact);
                     setCopiedId(m.match_id);
                     setTimeout(() => setCopiedId(null), 2000);
                   }}
@@ -67,7 +71,8 @@ export default function MyMatchesPage() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </CampusShell>
   );

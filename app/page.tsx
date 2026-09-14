@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AuthCaptcha } from "@/components/AuthCaptcha";
+import { SignalBrand } from "@/components/SignalBrand";
 
 export default function Landing() {
   const [email, setEmail] = useState("");
@@ -75,10 +76,7 @@ export default function Landing() {
       <div className="absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.92),rgba(255,255,255,.32)_58%,transparent_78%)]" />
 
       <div className="signal-enter relative mx-auto flex w-full max-w-2xl flex-col items-center">
-        <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/65 px-4 py-2 text-xs font-extrabold text-[#285b9f] shadow-sm backdrop-blur-md">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#3169b5] text-[10px] text-white">S</span>
-          청대 시그널
-        </div>
+        <SignalBrand />
 
         <div className="mt-8 text-center sm:mt-10">
           <p className="text-[10px] font-bold tracking-[0.34em] text-[#6681a6]">SAME CAMPUS · NEW CONNECTIONS</p>

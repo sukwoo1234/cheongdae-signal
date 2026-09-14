@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
-import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
+import { validateOneLiner, validateContactValue, validateColor } from "@/lib/validation/card";
 import { requireAjaxRequest } from "@/lib/csrf";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,7 +10,7 @@ export async function GET() {
   if (!user) return denialResponse("UNAUTHENTICATED");
 
   // cards.instagram_id는 이제 컬럼 단위로 SELECT 권한이 없다.
-  // 본인 인스타 ID는 SECURITY DEFINER RPC를 통해서만 받는다.
+  // 본인이 등록한 연락처는 SECURITY DEFINER RPC를 통해서만 받는다.
   const { data, error } = await supabase.rpc("my_card");
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
 
@@ -37,7 +37,7 @@ export async function PATCH(req: Request) {
     updates.one_liner = r.value;
   }
   if (body.instagram_id !== undefined) {
-    const r = validateInstagramId(body.instagram_id);
+    const r = validateContactValue(body.instagram_id);
     if (r.error) return NextResponse.json({ error: r.error }, { status: 400 });
     updates.instagram_id = r.value;
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SessionConfig } from "@/lib/types";
+import { formatContactValue } from "@/lib/validation/contact";
 
 interface Stats {
   male: number;
@@ -448,7 +449,7 @@ export default function AdminConsole() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium text-[#e1e1e6]">{card.one_liner}</p>
-                        <p className="mt-1 truncate text-[9px] text-[#666670]">{card.gender} · {card.email} · <span className="font-mono">@{card.instagram_id}</span></p>
+                        <p className="mt-1 truncate text-[9px] text-[#666670]">{card.gender} · {card.email} · <span className="font-mono">{formatContactValue(card.instagram_id)}</span></p>
                       </div>
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-medium ${card.hidden_by_admin ? "bg-[#30261a] text-[#d9a84f]" : "bg-[#183029] text-[#58c9ad]"}`}>{card.hidden_by_admin ? "숨김" : "공개"}</span>
                     </div>

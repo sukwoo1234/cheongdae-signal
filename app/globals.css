@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Nanum Pen Script Local";
+  src: url("/fonts/NanumPenScript-Heading.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --postit-yellow: #fff3b0;
   --postit-pink: #ffd6e0;
@@ -55,6 +63,10 @@ a {
 
 .signal-enter {
   animation: signal-in 420ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.signal-handwriting {
+  font-family: "Nanum Pen Script Local", "Nanum Pen Script", cursive;
 }
 
 .admin-scrollbar {

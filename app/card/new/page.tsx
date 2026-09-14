@@ -8,19 +8,20 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
 import { GraduationCapBadge } from "@/components/GraduationCapBadge";
+import { InstagramIcon, PaletteIcon } from "@/components/FieldIcons";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
 
 export default function NewCard() {
   const [oneLiner, setOneLiner] = useState("");
-  const [instaId, setInstaId] = useState("");
+  const [contactValue, setContactValue] = useState("");
   const [color, setColor] = useState<PostitColor>(POSTIT_COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const canSubmit = useMemo(
-    () => oneLiner.trim().length > 0 && instaId.trim().length > 0 && !submitting,
-    [oneLiner, instaId, submitting]
+    () => oneLiner.trim().length > 0 && contactValue.trim().length > 0 && !submitting,
+    [oneLiner, contactValue, submitting]
   );
 
   async function submit() {
@@ -34,7 +35,7 @@ export default function NewCard() {
       },
       body: JSON.stringify({
         one_liner: oneLiner.trim(),
-        instagram_id: instaId.trim(),
+        instagram_id: contactValue.trim(),
         color,
       }),
     });
@@ -46,7 +47,7 @@ export default function NewCard() {
         INVALID_ONELINER: "한 줄 소개는 1~20자",
         PROFANITY_DETECTED: "비속어가 포함되어 있어요",
         PHONE_DETECTED: "전화번호는 적을 수 없어요",
-        INVALID_INSTAGRAM_ID: "인스타 ID 형식이 잘못됐어요 (영문/숫자/_/. 만 가능, 30자 이내)",
+        INVALID_CONTACT: "인스타그램 ID 또는 휴대전화 번호 형식을 확인해주세요",
         INVALID_COLOR: "색상이 잘못됐어요",
         ALREADY_HAS_CARD: "이미 카드를 만들었어요",
       };
@@ -79,19 +80,23 @@ export default function NewCard() {
           {[...oneLiner].length}/{ONELINER_MAX_LENGTH}
         </div>
 
-        <label className="mb-2 mt-5 block text-sm font-bold text-[#3f5677]">♙ &nbsp;인스타그램 ID</label>
+        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#3f5677]">
+          <InstagramIcon />
+          인스타그램 ID 또는 전화번호
+        </label>
         <Input
-          placeholder="@ 없이 입력"
+          placeholder="@ 없이 입력 · 인스타가 없다면 전화번호"
           className="h-14 text-base"
-          value={instaId}
-          onChange={(e) => setInstaId(e.target.value)}
+          value={contactValue}
+          onChange={(e) => setContactValue(e.target.value)}
         />
+        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">인스타그램이 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
 
-        <label className="mb-3 mt-6 block text-sm font-bold text-[#3f5677]">◉ &nbsp;카드 색상</label>
+        <label className="mb-3 mt-6 flex items-center gap-2 text-sm font-bold text-[#3f5677]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 
         <div className="mt-7 rounded-[24px] border border-white/90 bg-[linear-gradient(135deg,rgba(239,246,255,.82),rgba(255,243,249,.82))] px-4 py-5 shadow-inner">
-          <div className="mb-4 text-center text-xs font-bold text-[#536c8e]">◉ &nbsp;미리보기</div>
+          <div className="mb-4 text-center text-xs font-bold text-[#536c8e]">미리보기</div>
           <div className="flex justify-center">
             <PetalCard text={oneLiner || "한 줄 소개"} color={color} size="lg" rotation={-2} />
           </div>

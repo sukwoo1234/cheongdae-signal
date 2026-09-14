@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
-import { validateOneLiner, validateInstagramId, validateColor } from "@/lib/validation/card";
+import { validateOneLiner, validateContactValue, validateColor } from "@/lib/validation/card";
 import { requireAjaxRequest } from "@/lib/csrf";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -17,8 +17,8 @@ export async function POST(req: Request) {
   const oneLiner = validateOneLiner(body.one_liner);
   if (oneLiner.error) return NextResponse.json({ error: oneLiner.error }, { status: 400 });
 
-  const instagram = validateInstagramId(body.instagram_id);
-  if (instagram.error) return NextResponse.json({ error: instagram.error }, { status: 400 });
+  const contact = validateContactValue(body.instagram_id);
+  if (contact.error) return NextResponse.json({ error: contact.error }, { status: 400 });
 
   const color = validateColor(body.color);
   if (color.error) return NextResponse.json({ error: color.error }, { status: 400 });
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       one_liner: oneLiner.value,
-      instagram_id: instagram.value,
+      instagram_id: contact.value,
       color: color.value,
     })
     .select("id")

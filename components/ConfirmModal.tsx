@@ -43,7 +43,7 @@ export function ConfirmModal({ card, onConfirm, onCancel, loading }: Props) {
           이 카드가 마음에 드나요?
         </h2>
         <p className="mx-auto mt-3 max-w-[290px] text-[13px] leading-6 text-[#71839d]">
-          확인하면 상대의 인스타그램 ID가 공개되고<br className="hidden min-[350px]:block" /> 선택 기회 1회가 사용됩니다.
+          확인하면 상대가 등록한 연락처가 공개되고<br className="hidden min-[350px]:block" /> 선택 기회 1회가 사용됩니다.
         </p>
         <div className="mt-7 flex gap-2.5">
           <Button variant="secondary" onClick={onCancel} disabled={loading} className="h-14 flex-1 rounded-2xl text-base">취소</Button>

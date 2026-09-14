@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
 import { SignalLoading } from "@/components/SignalLoading";
+import { InstagramIcon, PaletteIcon } from "@/components/FieldIcons";
 import { ONELINER_MAX_LENGTH, PostitColor } from "@/lib/constants";
 import type { MyCard } from "@/lib/types";
 
 export default function MyCardPage() {
   const [card, setCard] = useState<MyCard | null>(null);
   const [oneLiner, setOneLiner] = useState("");
-  const [instaId, setInstaId] = useState("");
+  const [contactValue, setContactValue] = useState("");
   const [color, setColor] = useState<PostitColor>("yellow");
   const [saving, setSaving] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -28,7 +29,7 @@ export default function MyCardPage() {
         setCard(d.card);
         if (d.card) {
           setOneLiner(d.card.one_liner);
-          setInstaId(d.card.instagram_id);
+          setContactValue(d.card.instagram_id);
           setColor(d.card.color);
           setHidden(d.card.hidden_by_user);
         }
@@ -43,7 +44,7 @@ export default function MyCardPage() {
         "Content-Type": "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: JSON.stringify({ one_liner: oneLiner, instagram_id: instaId, color }),
+      body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, color }),
     });
     setSaving(false);
   }
@@ -94,9 +95,15 @@ export default function MyCardPage() {
             if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
           }}
         />
-        <label className="mb-2 mt-5 block text-sm font-bold text-[#183654]">♙ &nbsp;인스타그램 ID</label>
-        <Input className="h-14 text-base" value={instaId} onChange={(e) => setInstaId(e.target.value)} />
-        <label className="mb-3 mt-5 block text-sm font-bold text-[#183654]">◉ &nbsp;카드 색상</label>
+        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><InstagramIcon />인스타그램 ID 또는 전화번호</label>
+        <Input
+          className="h-14 text-base"
+          placeholder="@ 없이 입력 · 인스타가 없다면 전화번호"
+          value={contactValue}
+          onChange={(e) => setContactValue(e.target.value)}
+        />
+        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">인스타그램이 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
+        <label className="mb-3 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 
         <Button onClick={save} disabled={saving} className="mt-6 h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#0b2b4c,#00213e)] text-base">
@@ -112,7 +119,7 @@ export default function MyCardPage() {
           {hidden ? "다시 보드에 올리기" : "카드 내리기 (숨기기)"}
         </button>
         <p className="mt-2 text-center text-[10px] text-[#8390a2]">
-          이미 본 사람의 인스타 ID는 회수되지 않아요.
+          이미 본 사람에게 공개된 연락처는 회수되지 않아요.
         </p>
 
         <div className="my-7 border-t border-[#e5ebf2]"></div>

@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { RevealModal } from "@/components/RevealModal";
 import { CountdownBanner } from "@/components/CountdownBanner";
 import { SignalLoading } from "@/components/SignalLoading";
+import { SignalBrand } from "@/components/SignalBrand";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
 import type { SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
@@ -23,7 +24,7 @@ export default function BoardPage() {
   const [sessionState, setSessionState] = useState<SessionState | null>(null);
   const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [pending, setPending] = useState<BoardCard | null>(null);
-  const [revealed, setRevealed] = useState<{ card: BoardCard; instagramId: string } | null>(null);
+  const [revealed, setRevealed] = useState<{ card: BoardCard; contactValue: string } | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [slot, setSlot] = useState<SlotState | null>(null);
   const [hasUsedSlot, setHasUsedSlot] = useState(false);
@@ -115,7 +116,7 @@ export default function BoardPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      setRevealed({ card: pending, instagramId: data.instagram_id });
+      setRevealed({ card: pending, contactValue: data.instagram_id });
       setPending(null);
       if (slot) {
         const remaining = Math.max(0, slot.remaining - 1);
@@ -178,7 +179,7 @@ export default function BoardPage() {
       <header className="sticky top-0 z-10 border-b border-white/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/board" className="hidden items-center gap-2 text-xs font-extrabold text-[#071b33] sm:flex"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#071b33] text-[10px] text-white">S</span>청대 시그널</Link>
+            <Link href="/board" className="hidden sm:block"><SignalBrand compact /></Link>
             <RatioCounter initialMale={sessionState.counts.male} initialFemale={sessionState.counts.female} />
             {slot && (
               <span
@@ -202,9 +203,9 @@ export default function BoardPage() {
 
       <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
         <div className="mb-4 px-1 text-center sm:text-left">
-          <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대의 인스타그램 ID가 공개됩니다.</p>
-          <h1 className="mt-7 text-3xl font-semibold leading-snug tracking-[-0.045em] text-[#4e6f9b] sm:text-4xl" style={{ fontFamily: "'Segoe Print', 'Apple SD Gothic Neo', sans-serif" }}>
-            좋은 인연이<br className="sm:hidden" /> 기다리고 있어요 ♡
+          <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대가 등록한 연락처가 공개됩니다.</p>
+          <h1 className="signal-handwriting mt-7 text-[38px] font-normal leading-[1.12] tracking-normal text-[#4e6f9b] sm:text-[48px]">
+            좋은 인연이<br className="sm:hidden" /> <span className="whitespace-nowrap">기다리고 있어요 ♡</span>
           </h1>
           <p className="mt-2 text-[9px] font-semibold tracking-[0.28em] text-[#7187a7]">CHEONGJU UNIVERSITY</p>
         </div>
@@ -224,7 +225,7 @@ export default function BoardPage() {
       {revealed && (
         <RevealModal
           card={revealed.card}
-          instagramId={revealed.instagramId}
+          contactValue={revealed.contactValue}
           onClose={() => {
             setRevealed(null);
             setReloadKey((k) => k + 1);
