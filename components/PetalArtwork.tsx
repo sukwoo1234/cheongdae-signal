@@ -10,30 +10,32 @@ export const PETAL_PALETTES: Record<PostitColor, { from: string; to: string; lin
   orange: { from: "#fffaf7", to: "#ffe1d3", line: "#c98668" },
 };
 
+const PETAL_FILTERS: Record<PostitColor, string> = {
+  yellow: "hue-rotate(75deg) saturate(.85) brightness(1.02)",
+  pink: "",
+  green: "hue-rotate(140deg) saturate(.65) brightness(1.02)",
+  blue: "hue-rotate(225deg) saturate(.7) brightness(1.03)",
+  purple: "hue-rotate(300deg) saturate(.65) brightness(1.02)",
+  orange: "hue-rotate(40deg) saturate(.75) brightness(1.01)",
+};
+
 interface Props {
   color: PostitColor;
   className?: string;
   style?: CSSProperties;
 }
 
-/** 시안의 벚꽃잎 실루엣을 모든 카드와 색상 선택기에 공통 적용한다. */
+/** 사용자가 제공한 벚꽃잎 PNG를 모든 카드와 색상 선택기에 공통 적용한다. */
 export function PetalArtwork({ color, className = "", style }: Props) {
-  const palette = PETAL_PALETTES[color];
-  const maskStyle: CSSProperties = {
-    backgroundImage: [
-      "radial-gradient(circle at 35% 38%, rgba(255,255,255,.7), transparent 42%)",
-      `linear-gradient(135deg, ${palette.from} 5%, ${palette.to} 92%)`,
-    ].join(", "),
-    WebkitMaskImage: "url('/petal-silhouette.png')",
-    maskImage: "url('/petal-silhouette.png')",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    ...style,
+  const { filter: extraFilter, ...restStyle } = style ?? {};
+  const artworkStyle: CSSProperties = {
+    backgroundImage: "url('/petal-silhouette.png')",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "contain",
+    filter: [PETAL_FILTERS[color], extraFilter].filter(Boolean).join(" "),
+    ...restStyle,
   };
 
-  return <span aria-hidden className={`block ${className}`} style={maskStyle} />;
+  return <span aria-hidden className={`block ${className}`} style={artworkStyle} />;
 }
