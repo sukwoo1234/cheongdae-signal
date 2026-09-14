@@ -21,7 +21,7 @@ export default function Privacy() {
           <li>이메일 주소 (@cju.ac.kr) — 본인 확인 및 로그인</li>
           <li>성별 (남/여) — 이성 카드 노출을 위한 필수 항목</li>
           <li>한 줄 소개 (최대 20자)</li>
-          <li>연락처 (인스타그램 ID 또는 휴대전화 번호 중 이용자가 선택한 항목)</li>
+          <li>연락처 (인스타그램 ID, 카카오톡 ID 또는 휴대전화 번호 중 이용자가 선택한 항목)</li>
         </ul>
         <p className="mb-2 font-semibold text-gray-800">서비스 이용 과정에서 자동 생성·수집되는 정보</p>
         <ul className="list-disc pl-5 space-y-1">

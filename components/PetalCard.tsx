@@ -15,9 +15,9 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
   const rot = rotation ?? [-4, 2, -1, 4][hash % 4];
   const icon = ["♡", "♬", "☕", "✈", "♧", "☾"][hash % 6];
   const sizes = {
-    sm: "h-[5.8rem] w-[6.7rem] text-[10px]",
-    md: "h-[8.8rem] w-[10.1rem] text-[13px]",
-    lg: "h-[10.2rem] w-[11.7rem] text-sm",
+    sm: "h-[6.4rem] w-[7.8rem] text-[10px]",
+    md: "h-[9.7rem] w-[11.8rem] text-[13px]",
+    lg: "h-[11.4rem] w-[13.9rem] text-sm",
   };
   const palette = PETAL_PALETTES[color];
   const wrapperStyle = { transform: `rotate(${rot}deg)` };
@@ -32,8 +32,8 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
         aria-label={onClick ? `${text} 카드 선택` : undefined}
       >
         <PetalArtwork color={color} className="absolute inset-0 h-full w-full" style={{ filter: "drop-shadow(0 14px 18px rgba(51,82,123,.13))" }} />
-        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[22%] text-[1.35em] font-normal leading-[1.25]">
-          <span className="block w-full break-all text-center [overflow-wrap:anywhere]">
+        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] text-[1.35em] font-normal leading-[1.3]">
+          <span className="block w-full text-center [overflow-wrap:anywhere] [word-break:keep-all]">
             {text}
           </span>
         </span>

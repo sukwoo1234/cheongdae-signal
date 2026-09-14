@@ -47,7 +47,7 @@ export default function NewCard() {
         INVALID_ONELINER: "한 줄 소개는 1~20자",
         PROFANITY_DETECTED: "비속어가 포함되어 있어요",
         PHONE_DETECTED: "전화번호는 적을 수 없어요",
-        INVALID_CONTACT: "인스타그램 ID 또는 휴대전화 번호 형식을 확인해주세요",
+        INVALID_CONTACT: "인스타그램 ID, 카톡 ID 또는 휴대전화 번호 형식을 확인해주세요",
         INVALID_COLOR: "색상이 잘못됐어요",
         ALREADY_HAS_CARD: "이미 카드를 만들었어요",
       };
@@ -82,15 +82,15 @@ export default function NewCard() {
 
         <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#3f5677]">
           <InstagramIcon />
-          인스타그램 ID 또는 전화번호
+          인스타그램 ID 또는 카톡 ID
         </label>
         <Input
-          placeholder="@ 없이 입력 · 인스타가 없다면 전화번호"
+          placeholder="인스타그램 · 카톡 ID · 휴대전화 번호"
           className="h-14 text-base"
           value={contactValue}
           onChange={(e) => setContactValue(e.target.value)}
         />
-        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">인스타그램이 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
+        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">해당하는 게 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
 
         <label className="mb-3 mt-6 flex items-center gap-2 text-sm font-bold text-[#3f5677]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />

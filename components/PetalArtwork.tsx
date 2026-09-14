@@ -17,20 +17,44 @@ interface Props {
   style?: CSSProperties;
 }
 
-/** 사용자가 제공한 벚꽃잎 PNG를 모든 카드와 색상 선택기에 공통 적용한다. */
+/** 사용자가 제공한 PNG 원본을 그대로 표시하고 그 위에 선택 색상만 입힌다. */
 export function PetalArtwork({ color, className = "", style }: Props) {
+  const palette = PETAL_PALETTES[color];
+
   return (
-    <Image
+    <span
       aria-hidden
-      alt=""
-      src="/petal-silhouette.png"
-      width={431}
-      height={331}
-      unoptimized
-      draggable={false}
       data-petal-color={color}
-      className={`object-contain ${className}`}
+      className={`relative block overflow-visible ${className}`}
       style={style}
-    />
+    >
+      <Image
+        alt=""
+        src="/petal-silhouette.png"
+        width={431}
+        height={331}
+        unoptimized
+        draggable={false}
+        className="absolute inset-0 h-full w-full scale-[1.32] object-contain"
+      />
+      {color !== "pink" && (
+        <span
+          className="absolute inset-0 scale-[1.32]"
+          style={{
+            backgroundColor: palette.to,
+            mixBlendMode: "color",
+            opacity: 0.92,
+            WebkitMaskImage: "url('/petal-silhouette.png')",
+            maskImage: "url('/petal-silhouette.png')",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+          }}
+        />
+      )}
+    </span>
   );
 }

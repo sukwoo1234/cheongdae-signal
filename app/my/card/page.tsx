@@ -95,14 +95,14 @@ export default function MyCardPage() {
             if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
           }}
         />
-        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><InstagramIcon />인스타그램 ID 또는 전화번호</label>
+        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><InstagramIcon />인스타그램 ID 또는 카톡 ID</label>
         <Input
           className="h-14 text-base"
-          placeholder="@ 없이 입력 · 인스타가 없다면 전화번호"
+          placeholder="인스타그램 · 카톡 ID · 휴대전화 번호"
           value={contactValue}
           onChange={(e) => setContactValue(e.target.value)}
         />
-        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">인스타그램이 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
+        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">해당하는 게 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
         <label className="mb-3 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 

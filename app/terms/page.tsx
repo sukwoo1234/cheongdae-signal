@@ -19,7 +19,7 @@ export default function Terms() {
       <section className="mb-6">
         <h2 className="font-bold text-base mb-2">3. 사용자 책임</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>본인의 인스타그램 ID 또는 휴대전화 번호를 정확히 입력할 책임</li>
+          <li>본인의 인스타그램 ID, 카카오톡 ID 또는 휴대전화 번호를 정확히 입력할 책임</li>
           <li>한 줄 소개에 욕설, 광고, 타인의 연락처를 작성하지 않을 의무</li>
           <li>매칭으로 얻은 타인의 연락처를 본 서비스 외부 (단톡방·SNS 등)에 무단 유포하지 않을 의무</li>
           <li>학교 이메일 하나당 행사별 기본 선택 기회 1회 규칙 준수</li>
