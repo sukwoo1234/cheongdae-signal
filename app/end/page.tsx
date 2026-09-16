@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SignalBrand } from "@/components/SignalBrand";
 
 export default function EndPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function EndPage() {
   return (
     <main className="min-h-screen bg-[#071b33] px-5 py-16 text-white">
       <section className="signal-enter mx-auto flex w-full max-w-md flex-col items-center rounded-[28px] border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl backdrop-blur sm:p-10">
-      <span className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#15bfa9] text-lg font-black text-[#071b33]">S</span>
+      <SignalBrand tone="dark" className="mb-6" />
       <p className="text-xs font-bold tracking-[0.12em] text-[#69dfcf]">SESSION CLOSED</p>
       <h1 className="mb-3 mt-2 text-2xl font-extrabold tracking-[-0.035em]">오늘의 시그널이 종료됐어요.</h1>
       <p className="max-w-sm text-center text-sm leading-6 text-slate-300">

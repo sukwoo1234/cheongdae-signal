@@ -1,3 +1,5 @@
+import { LegalBackButton } from "@/components/LegalBackButton";
+
 export default function Terms() {
   return (
     <main className="max-w-2xl mx-auto px-6 py-10 text-sm leading-relaxed text-gray-700">
@@ -35,6 +37,10 @@ export default function Terms() {
         <h2 className="font-bold text-base mb-2">5. 면책</h2>
         <p>매칭 후 발생하는 외부 연락·만남 등에 대해 본 서비스는 책임지지 않습니다.</p>
       </section>
+
+      <div className="mt-8 border-t pt-5 text-xs">
+        <LegalBackButton className="text-gray-500 underline" />
+      </div>
     </main>
   );
 }

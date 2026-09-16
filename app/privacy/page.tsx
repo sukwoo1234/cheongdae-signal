@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CONTACT_EMAIL, CONTACT_TEAM_NAME } from "@/lib/constants";
+import { LegalBackButton } from "@/components/LegalBackButton";
 
 export const metadata = {
   title: "개인정보 처리방침 — 청대 시그널",
@@ -208,9 +209,7 @@ export default function Privacy() {
         <Link href="/terms" className="text-blue-600 underline">
           이용약관
         </Link>
-        <Link href="/" className="text-gray-500 underline">
-          처음으로
-        </Link>
+        <LegalBackButton className="text-gray-500 underline" />
       </div>
     </main>
   );

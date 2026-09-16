@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SignalBrand } from "@/components/SignalBrand";
 
 type Enrollment = {
   factorId: string;
@@ -122,7 +123,10 @@ export default function AdminMfaPage() {
   return (
     <main className="min-h-screen bg-[#08090b] px-5 py-14 text-[#e8e8ec] sm:py-20">
       <div className="signal-enter mx-auto w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#111216] p-6 shadow-2xl sm:p-8">
-        <div className="mb-6 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#7c6ff0] text-xs font-black text-white">S</span><div><p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#777781]">Secure access</p><h1 className="text-[15px] font-semibold text-white">관리자 MFA 인증</h1></div></div>
+        <div className="mb-6">
+          <SignalBrand compact tone="dark" />
+          <div className="mt-3"><p className="text-[9px] font-medium uppercase tracking-[0.14em] text-[#777781]">Secure access</p><h1 className="text-[15px] font-semibold text-white">관리자 MFA 인증</h1></div>
+        </div>
         {loading ? (
           <p className="mt-6 text-center text-sm text-[#85858f]">인증 준비 중…</p>
         ) : needsEnrollment && !enrollment ? (

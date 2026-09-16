@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SessionConfig } from "@/lib/types";
 import { formatContactValue } from "@/lib/validation/contact";
+import { SignalBrand } from "@/components/SignalBrand";
 
 interface Stats {
   male: number;
@@ -316,9 +317,8 @@ export default function AdminConsole() {
       <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#08090b]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1380px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7c6ff0] text-[10px] font-black text-white">S</span>
             <div>
-              <h1 className="text-[13px] font-semibold tracking-[-0.01em]">청대 시그널</h1>
+              <SignalBrand compact tone="dark" />
               <p className="text-[9px] text-[#666670]">Operations</p>
             </div>
           </div>
