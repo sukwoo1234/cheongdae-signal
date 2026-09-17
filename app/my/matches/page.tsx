@@ -37,6 +37,9 @@ export default function MyMatchesPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#718be4]">Saved signals</p>
             <h1 className="mt-2 text-3xl font-extrabold tracking-[-0.045em] text-[#0c2748]">내 매칭 <span className="text-[#22aa9c]">{matches.length}</span></h1>
             <p className="mt-2 text-sm text-[#7085a2]">좋은 인연이, 여기 있어요 ♡</p>
+            <p className="mt-2 max-w-[290px] break-keep text-[11px] leading-5 text-[#8b9bb0]">
+              한 주의 매칭이 종료되면 상대의 연락처를 포함한 모든 매칭 정보가 사라집니다.
+            </p>
           </div>
           <Link href="/board" className="rounded-xl bg-white/90 px-5 py-3 text-sm font-bold text-[#526176] shadow-[0_8px_24px_rgba(39,68,103,.12)] ring-1 ring-[#dce4ee]">보드로</Link>
         </div>
