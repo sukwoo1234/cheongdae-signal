@@ -206,9 +206,10 @@ export default function BoardPage() {
         <div className="mb-4 px-1 text-center sm:text-left">
           <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대가 등록한 정보가 공개됩니다.</p>
           <h1 className="signal-handwriting mt-7 text-[38px] font-normal leading-[1.12] tracking-normal text-[#4e6f9b] sm:text-[48px]">
-            좋은 인연이<br className="sm:hidden" />{" "}
+            <span className="inline-block -translate-y-[.12em]">좋은 인연이</span>
+            <br className="sm:hidden" />{" "}
             <span className="whitespace-nowrap">
-              기다리고 있어요{" "}
+              <span className="inline-block -translate-y-[.12em]">기다리고 있어요</span>{" "}
               <HandwrittenHeart className="inline-block h-[.92em] w-[1.12em] -translate-y-[.02em] align-baseline overflow-visible" />
             </span>
           </h1>
