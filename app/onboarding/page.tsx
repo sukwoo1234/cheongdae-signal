@@ -92,13 +92,13 @@ export default function Onboarding() {
           <label className="mb-2 flex cursor-pointer items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3.5 transition hover:bg-[#f8fbff]">
             <input className="h-5 w-5 accent-[#4a86dc]" type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
             <span className="flex flex-1 items-center justify-between text-sm text-[#263c5b]">
-              <span><Link href="/terms" target="_blank" className="font-semibold text-[#3274d1] underline underline-offset-2">이용약관</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
+              <span><Link href="/terms" className="font-semibold text-[#3274d1] underline underline-offset-2">이용약관</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
             </span>
           </label>
           <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3.5 transition hover:bg-[#f8fbff]">
             <input className="h-5 w-5 accent-[#4a86dc]" type="checkbox" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
             <span className="flex flex-1 items-center justify-between text-sm text-[#263c5b]">
-              <span><Link href="/privacy" target="_blank" className="font-semibold text-[#3274d1] underline underline-offset-2">개인정보 처리방침</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
+              <span><Link href="/privacy" className="font-semibold text-[#3274d1] underline underline-offset-2">개인정보 처리방침</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
             </span>
           </label>
         </div>

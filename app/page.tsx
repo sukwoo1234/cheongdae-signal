@@ -117,6 +117,9 @@ export default function Landing() {
         </form>
 
         <p className="mt-3 text-center text-xs font-medium text-[#536985]">비밀번호 없이 이메일 링크 한 번이면 끝!</p>
+        <p className="mt-2 max-w-[500px] break-keep px-4 text-center text-[10px] leading-4 text-[#73849a]">
+          청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌 학생 개인 운영 서비스입니다.
+        </p>
 
         <div className="mt-48 grid w-full max-w-[620px] grid-cols-3 divide-x divide-[#cbd7e7] rounded-[24px] border border-white/80 bg-white/75 px-2 py-5 text-center shadow-[0_18px_50px_rgba(47,74,117,0.13)] backdrop-blur-xl sm:mt-56">
           <Feature value="같은 학교" label="더 가까운 소통" />
@@ -124,9 +127,6 @@ export default function Landing() {
           <Feature value="간편하게" label="비밀번호 없이" />
         </div>
 
-        <p className="mt-4 max-w-[520px] break-keep px-4 text-center text-[10px] leading-5 text-[#73849a]">
-          청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌 학생 개인 운영 서비스입니다.
-        </p>
       </div>
     </main>
   );
