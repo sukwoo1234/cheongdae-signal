@@ -63,7 +63,7 @@ export default function MyCardPage() {
   }
 
   async function deleteAccount() {
-    if (!confirm("계정·카드·매칭 정보를 삭제할까요? 행사 내 중복 이용 방지 기록은 행사 폐기 시 함께 삭제됩니다.")) return;
+    if (!confirm("계정·카드·매칭 정보를 삭제할까요?")) return;
     const res = await fetch("/api/users/me", {
       method: "DELETE",
       headers: { "X-Requested-With": "XMLHttpRequest" },

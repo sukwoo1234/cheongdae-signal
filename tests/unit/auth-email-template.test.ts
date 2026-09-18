@@ -15,10 +15,19 @@ describe.each(["magic-link.html", "confirmation.html"])("%s", (file) => {
     expect(html).toContain("학생 개인 운영 서비스입니다.");
   });
 
-  it("uses the campus background and redesigned signal email layout", () => {
-    expect(html).toContain("https://cheongdae-signal.vercel.app/hero-campus.webp");
-    expect(html).toContain("좋은 인연이");
-    expect(html).toContain("참여할</span> 준비가 됐어요.");
+  it("uses the exact supplied visual with a functional fallback link", () => {
+    expect(html).toContain("https://cheongdae-signal.vercel.app/email-login-hero.png");
+    expect(html).toContain("https://cheongdae-signal.vercel.app/email-login-lower-bg.png");
     expect(html).toContain("버튼이 열리지 않나요?");
+  });
+
+  it("keeps the supplied visual assets at their reference dimensions", () => {
+    const hero = readFileSync(resolve(process.cwd(), "public", "email-login-hero.png"));
+    const lower = readFileSync(resolve(process.cwd(), "public", "email-login-lower-bg.png"));
+
+    expect(hero.readUInt32BE(16)).toBe(1212);
+    expect(hero.readUInt32BE(20)).toBe(806);
+    expect(lower.readUInt32BE(16)).toBe(1212);
+    expect(lower.readUInt32BE(20)).toBe(492);
   });
 });
