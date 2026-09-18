@@ -21,6 +21,12 @@ describe.each(["magic-link.html", "confirmation.html"])("%s", (file) => {
     expect(html).toContain("버튼이 열리지 않나요?");
   });
 
+  it("keeps the compact card size, original outer background, and footer breathing room", () => {
+    expect(html).toContain("max-width:680px");
+    expect(html).toContain("hero-campus.webp");
+    expect(html).toContain('class="lower-pad" style="padding:0 63px 82px;"');
+  });
+
   it("keeps the supplied visual assets at their reference dimensions", () => {
     const hero = readFileSync(resolve(process.cwd(), "public", "email-login-hero.png"));
     const lower = readFileSync(resolve(process.cwd(), "public", "email-login-lower-bg.png"));

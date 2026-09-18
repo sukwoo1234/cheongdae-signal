@@ -6,27 +6,28 @@
     <title>청대 시그널 로그인</title>
     <style>
       @media only screen and (max-width: 620px) {
-        .lower-pad { padding: 0 16px 26px !important; }
+        .outer-pad { padding: 18px 10px !important; }
+        .lower-pad { padding: 0 34px 42px !important; }
         .help-box { border-radius: 14px !important; }
-        .help-copy { padding: 18px 18px 9px !important; font-size: 12px !important; }
-        .help-title { font-size: 15px !important; }
-        .link-wrap { padding: 0 14px 16px !important; }
-        .link-text { padding: 12px !important; font-size: 10px !important; }
+        .help-copy { padding: 15px 17px 7px !important; font-size: 11px !important; }
+        .help-title { font-size: 13px !important; }
+        .link-wrap { padding: 0 16px 16px !important; }
+        .link-text { padding: 10px 11px !important; font-size: 9px !important; }
         .footer-copy { font-size: 10px !important; }
-        .divider { margin: 24px 0 18px !important; }
+        .divider { margin: 24px 0 16px !important; }
       }
     </style>
   </head>
-  <body style="margin:0;padding:0;background:#f4dfe9;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',Arial,sans-serif;color:#071b33;">
+  <body style="margin:0;padding:0;background:#dcecff;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',Arial,sans-serif;color:#071b33;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">청대 시그널 로그인 링크가 도착했어요. 15분 안에 확인해주세요.</div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#f4dfe9;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" background="https://cheongdae-signal.vercel.app/hero-campus.webp" style="width:100%;background-color:#dcecff;background-image:linear-gradient(rgba(229,240,255,.45),rgba(255,226,238,.55)),url('https://cheongdae-signal.vercel.app/hero-campus.webp');background-repeat:no-repeat;background-position:center;background-size:cover;">
       <tr>
-        <td align="center" style="padding:0;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:1212px;">
+        <td align="center" class="outer-pad" style="padding:36px 14px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;">
             <tr>
               <td style="padding:0;font-size:0;line-height:0;">
                 <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="display:block;text-decoration:none;">
-                  <img src="https://cheongdae-signal.vercel.app/email-login-hero.png" width="1212" alt="청대 시그널 시작하기" style="display:block;width:100%;max-width:1212px;height:auto;border:0;">
+                  <img src="https://cheongdae-signal.vercel.app/email-login-hero.png" width="680" alt="청대 시그널 시작하기" style="display:block;width:100%;max-width:680px;height:auto;border:0;">
                 </a>
               </td>
             </tr>
@@ -34,30 +35,30 @@
               <td background="https://cheongdae-signal.vercel.app/email-login-lower-bg.png" style="padding:0;background-color:#f8e3ec;background-image:url('https://cheongdae-signal.vercel.app/email-login-lower-bg.png');background-position:top center;background-repeat:no-repeat;background-size:100% 100%;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td class="lower-pad" style="padding:0 113px 62px;">
+                    <td class="lower-pad" style="padding:0 63px 82px;">
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="help-box" style="background:rgba(235,242,255,.92);background-color:#edf3ff;border:1px solid rgba(255,255,255,.95);border-radius:20px;">
                         <tr>
-                          <td class="help-copy" style="padding:28px 30px 12px;color:#587294;font-size:20px;line-height:1.6;">
-                            <strong class="help-title" style="color:#071b33;font-size:23px;">버튼이 열리지 않나요?</strong><br>
+                          <td class="help-copy" style="padding:16px 17px 7px;color:#587294;font-size:11px;line-height:1.6;">
+                            <strong class="help-title" style="color:#071b33;font-size:13px;">버튼이 열리지 않나요?</strong><br>
                             아래 주소를 복사해 브라우저 주소창에 붙여넣어 주세요.
                           </td>
                         </tr>
                         <tr>
-                          <td class="link-wrap" style="padding:0 28px 28px;">
+                          <td class="link-wrap" style="padding:0 16px 16px;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border:1px solid #cfdbec;border-radius:14px;">
                               <tr>
-                                <td class="link-text" style="padding:18px 20px;word-break:break-all;color:#547198;font-size:18px;line-height:1.45;">
+                                <td class="link-text" style="padding:10px 11px;word-break:break-all;color:#547198;font-size:10px;line-height:1.45;">
                                   <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="color:#547198;text-decoration:none;">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a>
                                 </td>
-                                <td width="62" align="center" valign="middle" style="width:62px;color:#071b33;font-size:25px;">⧉</td>
+                                <td width="35" align="center" valign="middle" style="width:35px;color:#071b33;font-size:15px;">⧉</td>
                               </tr>
                             </table>
                           </td>
                         </tr>
                       </table>
 
-                      <div class="divider" style="height:1px;background:#afc3dc;margin:44px 0 28px;"></div>
-                      <p class="footer-copy" style="margin:0;color:#617b9d;font-size:17px;line-height:1.65;">
+                      <div class="divider" style="height:1px;background:#afc3dc;margin:25px 0 16px;"></div>
+                      <p class="footer-copy" style="margin:0;color:#617b9d;font-size:10px;line-height:1.65;">
                         본인이 요청하지 않았다면 이 메일을 무시해도 됩니다.<br>
                         청대 시그널 운영팀 · 청주대학교 학생 전용<br>
                         <span style="display:inline-block;margin-top:6px;color:#7d91ab;">청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌<br>학생 개인 운영 서비스입니다.</span>
