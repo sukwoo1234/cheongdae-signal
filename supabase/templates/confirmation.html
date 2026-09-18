@@ -4,62 +4,106 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>청대 시그널 로그인</title>
+    <style>
+      @font-face {
+        font-family: "Nanum Pen Script";
+        src: url("https://cheongdae-signal.vercel.app/fonts/NanumPenScript-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+      }
+      @media only screen and (max-width: 620px) {
+        .outer-pad { padding: 18px 10px !important; }
+        .card-pad { padding: 26px 22px !important; }
+        .brand-name { font-size: 18px !important; }
+        .university { font-size: 10px !important; letter-spacing: 1.5px !important; }
+        .handwriting { font-size: 22px !important; }
+        .headline { font-size: 34px !important; line-height: 1.3 !important; letter-spacing: -1.5px !important; }
+        .description { font-size: 14px !important; }
+        .cta-link { display: block !important; padding: 16px 18px !important; }
+        .link-box { font-size: 10px !important; }
+      }
+    </style>
   </head>
-  <body style="margin:0;padding:0;background:#f2f5f9;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',Arial,sans-serif;color:#071b33;">
+  <body style="margin:0;padding:0;background:#dcecff;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',Arial,sans-serif;color:#071b33;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">청대 시그널 로그인 링크가 도착했어요. 15분 안에 확인해주세요.</div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f2f5f9;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" background="https://cheongdae-signal.vercel.app/hero-campus.webp" style="width:100%;background-color:#dcecff;background-image:linear-gradient(rgba(229,240,255,.45),rgba(255,226,238,.55)),url('https://cheongdae-signal.vercel.app/hero-campus.webp');background-repeat:no-repeat;background-position:center;background-size:cover;">
       <tr>
-        <td align="center" style="padding:32px 14px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #dce4ee;border-radius:22px;overflow:hidden;">
+        <td align="center" class="outer-pad" style="padding:36px 14px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;background:rgba(255,255,255,.93);background-color:#ffffff;border:1px solid rgba(255,255,255,.9);border-radius:26px;overflow:hidden;box-shadow:0 24px 70px rgba(52,83,128,.18);">
             <tr>
-              <td style="height:6px;background:#15bfa9;font-size:0;line-height:0;">&nbsp;</td>
-            </tr>
-            <tr>
-              <td style="padding:34px 34px 10px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <td class="card-pad" style="padding:38px 44px 42px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td width="34" height="34" align="center" valign="middle" style="width:34px;height:34px;border-radius:10px;background:#071b33;color:#ffffff;font-size:13px;font-weight:800;">S</td>
-                    <td style="padding-left:10px;font-size:15px;font-weight:800;color:#071b33;">청대 시그널</td>
+                    <td valign="middle">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:14px;background:#071b33;color:#ffffff;font-size:21px;font-weight:800;">S</td>
+                          <td class="brand-name" style="padding-left:13px;color:#071b33;font-size:21px;font-weight:800;white-space:nowrap;">청대 시그널</td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td align="right" valign="middle" class="university" style="color:#597195;font-family:Georgia,'Times New Roman',serif;font-size:12px;font-weight:700;line-height:1.45;letter-spacing:2px;">CHEONGJU<br>UNIVERSITY</td>
                   </tr>
                 </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:22px 34px 34px;">
-                <p style="margin:0 0 10px;color:#0ca18e;font-size:12px;font-weight:700;letter-spacing:1px;">LOGIN LINK</p>
-                <h1 style="margin:0;color:#071b33;font-size:27px;line-height:1.35;letter-spacing:-0.8px;">오늘의 시그널에<br>참여할 준비가 됐어요.</h1>
-                <p style="margin:18px 0 0;color:#637083;font-size:14px;line-height:1.75;">
-                  아래 버튼을 눌러 청대 시그널에 로그인해주세요.<br>
-                  링크는 발송 후 <strong style="color:#253a55;">15분 동안</strong>, 한 번만 사용할 수 있습니다.
+
+                <p class="handwriting" style="margin:32px 0 14px;color:#5d7fae;font-family:'Nanum Pen Script','Apple SD Gothic Neo',cursive;font-size:26px;line-height:1.15;">
+                  좋은 인연이<br>기다리고 있어요 ♡
                 </p>
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:26px;">
+
+                <h1 class="headline" style="margin:0;color:#071b33;font-size:45px;font-weight:900;line-height:1.26;letter-spacing:-2.6px;">
+                  오늘의 시그널에<br><span style="color:#d85b80;">참여할</span> 준비가 됐어요.
+                </h1>
+
+                <p class="description" style="margin:22px 0 0;color:#587294;font-size:16px;line-height:1.75;">
+                  아래 버튼을 눌러 청대 시그널에 로그인해주세요.<br>
+                  링크는 발송 후 <strong style="color:#102947;">15분 동안, 한 번만</strong> 사용할 수 있습니다.
+                </p>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:25px;">
                   <tr>
-                    <td align="center" bgcolor="#071b33" style="border-radius:11px;">
-                      <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;">청대 시그널 시작하기&nbsp; →</a>
+                    <td align="left">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:330px;">
+                        <tr>
+                          <td align="center" bgcolor="#4d95ea" style="border-radius:12px;background:#4d95ea;background-image:linear-gradient(135deg,#59a5f2,#3f83df);box-shadow:0 10px 24px rgba(66,132,221,.24);">
+                            <a class="cta-link" href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="display:block;padding:17px 24px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;">청대 시그널 시작하기&nbsp;&nbsp; →</a>
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                 </table>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;background:#f3f6fa;border-radius:12px;">
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;background:rgba(238,244,255,.88);background-color:#eef4ff;border:1px solid #ffffff;border-radius:16px;">
                   <tr>
-                    <td style="padding:15px 16px;color:#637083;font-size:12px;line-height:1.65;">
-                      <strong style="color:#253a55;">버튼이 열리지 않나요?</strong><br>
+                    <td style="padding:17px 18px 8px;color:#587294;font-size:12px;line-height:1.65;">
+                      <strong style="color:#102947;font-size:14px;">버튼이 열리지 않나요?</strong><br>
                       아래 주소를 복사해 브라우저 주소창에 붙여넣어 주세요.
                     </td>
                   </tr>
+                  <tr>
+                    <td style="padding:0 14px 15px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border:1px solid #d8e4f3;border-radius:11px;">
+                        <tr>
+                          <td class="link-box" style="padding:12px 13px;word-break:break-all;color:#547198;font-size:11px;line-height:1.5;">
+                            <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="color:#547198;text-decoration:none;">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a>
+                          </td>
+                          <td width="44" align="center" valign="middle" style="width:44px;color:#294f7c;font-size:18px;">⧉</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
                 </table>
-                <p style="margin:12px 0 0;word-break:break-all;color:#0b8f7e;font-size:11px;line-height:1.6;">
-                  <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email" style="color:#0b8f7e;text-decoration:underline;">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a>
-                </p>
-                <div style="height:1px;background:#e4eaf1;margin:28px 0 20px;"></div>
-                <p style="margin:0;color:#8a96a6;font-size:11px;line-height:1.7;">
+
+                <div style="height:1px;background:#bfd0e4;margin:28px 0 18px;"></div>
+                <p style="margin:0;color:#6f84a1;font-size:11px;line-height:1.75;">
                   본인이 요청하지 않았다면 이 메일을 무시해도 됩니다.<br>
                   청대 시그널 운영팀 · 청주대학교 학생 전용<br>
-                  <span style="display:inline-block;margin-top:6px;color:#9aa6b5;">청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌<br>학생 개인 운영 서비스입니다.</span>
+                  <span style="display:inline-block;margin-top:6px;color:#8a9bb1;">청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌<br>학생 개인 운영 서비스입니다.</span>
                 </p>
               </td>
             </tr>
           </table>
-          <p style="margin:16px 0 0;color:#9aa6b5;font-size:10px;">© 청대 시그널</p>
+          <p style="margin:15px 0 0;color:#7085a2;font-size:10px;text-shadow:0 1px 8px rgba(255,255,255,.9);">© 청대 시그널</p>
         </td>
       </tr>
     </table>
