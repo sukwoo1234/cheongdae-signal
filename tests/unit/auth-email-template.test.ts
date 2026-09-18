@@ -21,9 +21,10 @@ describe.each(["magic-link.html", "confirmation.html"])("%s", (file) => {
     expect(html).toContain("버튼이 열리지 않나요?");
   });
 
-  it("keeps the compact card size, original outer background, and footer breathing room", () => {
+  it("keeps the compact card size, white outer background, and footer breathing room", () => {
     expect(html).toContain("max-width:680px");
-    expect(html).toContain("hero-campus.webp");
+    expect(html).toContain('style="width:100%;background:#ffffff;"');
+    expect(html).not.toContain("hero-campus.webp");
     expect(html).toContain('class="lower-pad" style="padding:0 63px 82px;"');
   });
 
