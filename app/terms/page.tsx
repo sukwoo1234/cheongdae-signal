@@ -38,6 +38,15 @@ export default function Terms() {
         <p>매칭 후 발생하는 외부 연락·만남 등에 대해 본 서비스는 책임지지 않습니다.</p>
       </section>
 
+      <section className="mb-6">
+        <h2 className="font-bold text-base mb-2">6. 운영 주체</h2>
+        <p>
+          청대 시그널은 학생 개인이 독립적으로 운영하는 서비스이며, 청주대학교 총학생회가
+          주관·주최·운영하거나 보증하는 공식 사업이 아닙니다. 서비스 관련 문의, 신고 및 분쟁은
+          서비스 운영자에게 문의해야 합니다.
+        </p>
+      </section>
+
       <div className="mt-8 border-t pt-5 text-xs">
         <LegalBackButton className="text-gray-500 underline" />
       </div>

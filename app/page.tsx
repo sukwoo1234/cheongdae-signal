@@ -123,6 +123,10 @@ export default function Landing() {
           <Feature value="청대생 전용" label="안전한 매칭" />
           <Feature value="간편하게" label="비밀번호 없이" />
         </div>
+
+        <p className="mt-4 max-w-[520px] break-keep px-4 text-center text-[10px] leading-5 text-[#73849a]">
+          청대 시그널은 청주대학교 총학생회가 주관·주최하는 공식 사업이 아닌 학생 개인 운영 서비스입니다.
+        </p>
       </div>
     </main>
   );
