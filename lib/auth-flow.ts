@@ -98,6 +98,18 @@ export async function finishSignIn(
     return "/?error=banned";
   }
 
+  const { data: permanentBan, error: permanentBanError } = await admin
+    .from("permanent_bans")
+    .select("email")
+    .eq("email", email)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (permanentBanError || permanentBan) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return permanentBan ? "/?error=banned" : "/?error=auth_failed";
+  }
+
   const { data: config, error: configError } = await admin
     .from("session_config")
     .select("event_id, purging")

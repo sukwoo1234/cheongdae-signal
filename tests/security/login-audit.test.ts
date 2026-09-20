@@ -40,11 +40,11 @@ function turnstileResult(overrides: Record<string, unknown> = {}) {
 
 function adminMock() {
   const query: any = {
-    select: vi.fn(), eq: vi.fn(), update: vi.fn(), delete: vi.fn(), upsert: vi.fn(),
+    select: vi.fn(), eq: vi.fn(), gt: vi.fn(), update: vi.fn(), delete: vi.fn(), upsert: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     single: vi.fn().mockResolvedValue({ data: { email: student.email }, error: null }),
   };
-  for (const method of ["select", "eq", "update", "delete"]) query[method].mockReturnValue(query);
+  for (const method of ["select", "eq", "gt", "update", "delete"]) query[method].mockReturnValue(query);
   query.upsert.mockResolvedValue({ error: null });
   const admin = {
     from: vi.fn().mockReturnValue(query),
@@ -173,6 +173,29 @@ describe("login security boundary", () => {
     expect(normal.headers.get("set-cookie")).toContain("cd_login_state=");
     expect(banned.headers.get("set-cookie")).toContain("cd_login_state=");
     expect(admin.auth.signInWithOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it("silently withholds a magic link from a permanently banned email", async () => {
+    const { admin, query } = adminMock();
+    query.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { email: student.email }, error: null });
+
+    const response = await sendLink(request());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(response.headers.get("set-cookie")).toContain("cd_login_state=");
+    expect(admin.auth.signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the permanent-ban lookup fails", async () => {
+    const { admin, query } = adminMock();
+    query.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "DB unavailable" } });
+
+    expect((await sendLink(request())).status).toBe(500);
+    expect(admin.auth.signInWithOtp).not.toHaveBeenCalled();
   });
 
   it("denies password-only sessions at the active-user boundary", async () => {

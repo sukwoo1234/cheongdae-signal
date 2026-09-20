@@ -86,6 +86,15 @@ export async function POST(req: Request) {
   if (banLookupError) {
     return NextResponse.json({ error: "AUTH_CHECK_FAILED" }, { status: 500 });
   }
+  const { data: permanentBan, error: permanentBanError } = await admin
+    .from("permanent_bans")
+    .select("email")
+    .eq("email", normalized)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (permanentBanError) {
+    return NextResponse.json({ error: "AUTH_CHECK_FAILED" }, { status: 500 });
+  }
 
   const state = createLoginState();
   const redirectUrl = new URL(
@@ -96,7 +105,7 @@ export async function POST(req: Request) {
 
   // 차단된 주소에도 성공과 동일한 cookie/응답을 내려 계정 상태를 열거하지 못하게
   // 한다. 메일만 발송하지 않는다.
-  if (!ban) {
+  if (!ban && !permanentBan) {
     const { error } = await admin.auth.signInWithOtp({
       email: normalized,
       options: { emailRedirectTo: redirectUrl.toString() },

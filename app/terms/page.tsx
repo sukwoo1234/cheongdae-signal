@@ -9,7 +9,8 @@ export default function Terms() {
         <h2 className="font-bold text-base mb-2">1. 서비스의 목적</h2>
         <p>
           "청대 시그널"은 청주대학교 학생 간 1:1 연락처 매칭을 위한 한정 기간 운영 서비스입니다.
-          참가자 개인정보는 행사 종료 후 운영자의 폐기 절차에 따라 영구 삭제됩니다.
+          행사별 참가·매칭 정보는 행사 종료 후 운영자의 폐기 절차에 따라 삭제됩니다.
+          다만 6개월 차단된 이메일과 차단 사유는 개인정보 처리방침에 따라 만료 전까지 별도로 보관합니다.
         </p>
       </section>
 
@@ -30,7 +31,7 @@ export default function Terms() {
 
       <section className="mb-6">
         <h2 className="font-bold text-base mb-2">4. 서비스 종료</h2>
-        <p>운영자가 설정한 종료 시각에 자동으로 모든 매칭이 정지되며, 운영자의 확정 후 전체 데이터가 폐기됩니다.</p>
+        <p>운영자가 설정한 종료 시각에 자동으로 모든 매칭이 정지되며, 운영자의 확정 후 행사 데이터가 폐기됩니다.</p>
       </section>
 
       <section className="mb-6">

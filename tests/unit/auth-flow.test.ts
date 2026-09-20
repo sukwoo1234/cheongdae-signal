@@ -34,14 +34,17 @@ describe("finishSignIn runtime boundary", () => {
       const query = {
         select: vi.fn(),
         eq: vi.fn(),
+        gt: vi.fn(),
         maybeSingle: vi.fn().mockResolvedValue(result),
         single: vi.fn().mockResolvedValue(result),
       };
       query.select.mockReturnValue(query);
       query.eq.mockReturnValue(query);
+      query.gt.mockReturnValue(query);
       return query;
     };
     const bannedEmails = chain({ data: null, error: null });
+    const permanentBans = chain({ data: null, error: null });
     const sessionConfig = chain({
       data: { event_id: "00000000-0000-4000-8000-000000000099", purging: false },
       error: null,
@@ -51,6 +54,7 @@ describe("finishSignIn runtime boundary", () => {
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => ({
         banned_emails: bannedEmails,
+        permanent_bans: permanentBans,
         session_config: sessionConfig,
         users,
         cards,
@@ -58,7 +62,7 @@ describe("finishSignIn runtime boundary", () => {
       rpc: vi.fn().mockResolvedValue({ error: null }),
     });
 
-    return { signOut };
+    return { signOut, permanentBans };
   }
 
   beforeEach(() => {
@@ -111,6 +115,22 @@ describe("finishSignIn runtime boundary", () => {
 
     expect(next).toBe("/onboarding");
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("rejects a permanently banned account at the callback boundary", async () => {
+    const { signOut, permanentBans } = useValidSession();
+    permanentBans.maybeSingle.mockResolvedValue({ data: { email: "student@cju.ac.kr" }, error: null });
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/?error=banned");
+    expect(signOut).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed if the permanent-ban lookup is unavailable", async () => {
+    const { signOut, permanentBans } = useValidSession();
+    permanentBans.maybeSingle.mockResolvedValue({ data: null, error: { message: "DB unavailable" } });
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/?error=auth_failed");
+    expect(signOut).toHaveBeenCalledOnce();
   });
 
   it("never grants the cross-browser exception to the administrator", async () => {

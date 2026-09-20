@@ -34,6 +34,13 @@ interface UserInfo {
   viewed_card_oneliner: string | null;
 }
 
+interface PermanentBan {
+  email: string;
+  reason: string;
+  created_at: string;
+  expires_at: string;
+}
+
 interface SessionDraft {
   startsAt: string;
   endsAt: string;
@@ -99,6 +106,21 @@ export default function AdminConsole() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [userMessage, setUserMessage] = useState("");
   const [loadingUser, setLoadingUser] = useState(false);
+  const [banEmail, setBanEmail] = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [permanentBans, setPermanentBans] = useState<PermanentBan[]>([]);
+  const [banMessage, setBanMessage] = useState("");
+  const [banBusy, setBanBusy] = useState(false);
+
+  async function loadPermanentBans() {
+    const response = await fetch("/api/admin/permanent-bans", { cache: "no-store" });
+    if (!response.ok) {
+      setBanMessage("6개월 차단 목록을 불러오지 못했습니다.");
+      return;
+    }
+    const data = (await response.json()) as { bans: PermanentBan[] };
+    setPermanentBans(data.bans);
+  }
 
   async function loadStats(syncDraft = false) {
     const response = await fetch("/api/admin/stats", { cache: "no-store" });
@@ -111,6 +133,7 @@ export default function AdminConsole() {
 
   useEffect(() => {
     void loadStats();
+    void loadPermanentBans();
     const timer = window.setInterval(() => void loadStats(false), 10_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -190,11 +213,16 @@ export default function AdminConsole() {
     setSearching(false);
   }
 
-  async function hideCard(id: string) {
-    await fetch(`/api/admin/cards/${id}/hide`, {
+  async function hideCard(id: string, hidden: boolean) {
+    const response = await fetch(`/api/admin/cards/${id}/hide`, {
       method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ hidden }),
     });
+    if (!response.ok) {
+      alert(hidden ? "카드를 숨기지 못했습니다." : "카드를 다시 공개하지 못했습니다.");
+      return;
+    }
     await doSearch();
   }
 
@@ -262,8 +290,44 @@ export default function AdminConsole() {
     }
   }
 
+  async function addPermanentBan() {
+    const email = banEmail.trim().toLowerCase();
+    const reason = banReason.trim();
+    if (!email || !reason) {
+      setBanMessage("학교 이메일과 차단 사유를 모두 입력해주세요.");
+      return;
+    }
+    if (!confirm(`${email}을 6개월간 차단할까요? 현재 계정은 삭제되고 이번 행사도 차단됩니다.`)) return;
+    setBanBusy(true);
+    const response = await fetch("/api/admin/permanent-bans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ email, reason }),
+    });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    setBanMessage(response.ok ? "6개월 차단했습니다." : data.error === "AUTH_DELETE_FAILED"
+      ? "DB 차단은 적용됐지만 계정 삭제에 실패했습니다. 같은 이메일로 다시 차단을 실행해주세요."
+      : "차단하지 못했습니다. 이메일과 서버 상태를 확인해주세요.");
+    if (response.ok) { setBanEmail(""); setBanReason(""); setUserInfo(null); }
+    await loadPermanentBans();
+    setBanBusy(false);
+  }
+
+  async function releasePermanentBan(email: string) {
+    if (!confirm(`${email}의 6개월 차단만 해제할까요? 이번 행사 차단과 삭제된 계정은 복구되지 않습니다.`)) return;
+    setBanBusy(true);
+    const response = await fetch("/api/admin/permanent-bans", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ email }),
+    });
+    setBanMessage(response.ok ? "6개월 차단을 해제했습니다. 이번 행사 차단은 유지됩니다." : "차단을 해제하지 못했습니다.");
+    await loadPermanentBans();
+    setBanBusy(false);
+  }
+
   async function wipeData() {
-    const confirmation = prompt("모든 데이터를 영구 폐기하려면 WIPE를 입력하세요.");
+    const confirmation = prompt("행사 데이터를 영구 폐기하려면 WIPE를 입력하세요. 6개월 차단 목록은 만료 전까지 유지됩니다.");
     if (confirmation !== "WIPE") return;
     const response = await fetch("/api/admin/wipe-data", {
       method: "POST",
@@ -429,9 +493,9 @@ export default function AdminConsole() {
               <SectionHeader eyebrow="Danger zone" title="데이터 폐기" description="행사 종료와 검증이 끝난 뒤에만 실행하세요." danger />
               <div className="p-4 sm:p-5">
                 <button onClick={wipeData} className="h-10 w-full rounded-lg border border-[#713340] bg-[#2a151a] text-[11px] font-semibold text-[#ff8495] transition hover:bg-[#35191f]">
-                  전체 데이터 영구 폐기
+                  행사 데이터 영구 폐기
                 </button>
-                <p className="mt-2 text-center text-[9px] leading-4 text-[#8e5962]">매칭·카드·사용자·인증 계정을 삭제하며 되돌릴 수 없습니다.</p>
+                <p className="mt-2 text-center text-[9px] leading-4 text-[#8e5962]">매칭·카드·사용자·인증 계정은 삭제하며 6개월 차단 목록은 만료 전까지 유지됩니다.</p>
               </div>
             </section>
           </div>
@@ -454,7 +518,7 @@ export default function AdminConsole() {
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-medium ${card.hidden_by_admin ? "bg-[#30261a] text-[#d9a84f]" : "bg-[#183029] text-[#58c9ad]"}`}>{card.hidden_by_admin ? "숨김" : "공개"}</span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button onClick={() => void hideCard(card.id)} className="rounded-md border border-white/[0.08] px-2.5 py-1.5 text-[9px] font-medium text-[#a4a4ad] hover:bg-white/[0.04]">{card.hidden_by_admin ? "다시 공개" : "숨기기"}</button>
+                      <button onClick={() => void hideCard(card.id, !card.hidden_by_admin)} className="rounded-md border border-white/[0.08] px-2.5 py-1.5 text-[9px] font-medium text-[#a4a4ad] hover:bg-white/[0.04]">{card.hidden_by_admin ? "다시 공개" : "숨기기"}</button>
                       <button onClick={() => void removeCard(card.id)} className="rounded-md border border-[#4e4230] px-2.5 py-1.5 text-[9px] font-medium text-[#e0b86d] hover:bg-[#221d14]">삭제</button>
                       <button onClick={() => void banAndDeleteCard(card.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185] hover:bg-[#251216]">차단</button>
                     </div>
@@ -485,6 +549,28 @@ export default function AdminConsole() {
             </div>
           </section>
         </div>
+
+        <section className="mt-5 overflow-hidden rounded-xl border border-[#522831] bg-[#1a1114]">
+          <SectionHeader eyebrow="Last resort" title="이메일 6개월 차단" description="행사 차단과 별개로 6개월간 유지됩니다. 확인된 악용에만 사용하세요." danger />
+          <div className="space-y-3 p-4 sm:p-5">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input value={banEmail} onChange={(event) => setBanEmail(event.target.value)} placeholder="student@cju.ac.kr" aria-label="6개월 차단할 학교 이메일" className="h-10 rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-xs text-white outline-none" />
+              <input value={banReason} onChange={(event) => setBanReason(event.target.value)} maxLength={500} placeholder="차단 사유" aria-label="6개월 차단 사유" className="h-10 rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-xs text-white outline-none" />
+            </div>
+            <button onClick={() => void addPermanentBan()} disabled={banBusy} className="rounded-lg border border-[#713340] bg-[#2a151a] px-4 py-2 text-xs font-semibold text-[#ff8495] disabled:opacity-40">6개월 차단</button>
+            {banMessage && <p role="status" className="text-[10px] text-[#ff9aa9]">{banMessage}</p>}
+            <p className="text-[10px] text-[#8e5962]">6개월 뒤 자동 만료됩니다. 수동 해제해도 이번 행사 차단과 삭제된 계정·카드는 복구되지 않습니다.</p>
+            <div className="space-y-2">
+              {permanentBans.length === 0 && <p className="text-[10px] text-[#8e5962]">6개월 차단된 이메일이 없습니다.</p>}
+              {permanentBans.map((ban) => (
+                <div key={ban.email} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[0.07] bg-[#0c0d10] p-3">
+                  <div className="min-w-0"><p className="break-all text-xs text-white">{ban.email}</p><p className="mt-1 text-[10px] text-[#a4a4ad]">{ban.reason} · {formatTime(ban.expires_at)} 만료</p></div>
+                  <button onClick={() => void releasePermanentBan(ban.email)} disabled={banBusy} className="rounded-md border border-white/[0.12] px-3 py-1.5 text-[10px] text-[#d4d4d9] disabled:opacity-40">차단 해제</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );

@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0017_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0018_'));
 const anonymousSessionPrivileges = (await db.query(`
   select
     has_table_privilege('anon', 'public.session_config', 'select') as config,
@@ -296,6 +296,81 @@ const nextRegistration = await register(nextEventId, A3, 'a@cju.ac.kr', nextSubj
 secured(
   'a new event starts the same participant with one unused slot',
   nextRegistration.rows[0].allowance === 1 && nextRegistration.rows[0].used === 0,
+);
+
+await owner();
+const permanentPrivileges = (await db.query(`
+  select has_table_privilege('anon', 'public.permanent_bans', 'select') as anon_read,
+         has_table_privilege('authenticated', 'public.permanent_bans', 'select') as user_read
+`)).rows[0];
+secured('permanent-ban emails are not readable by participants', !permanentPrivileges.anon_read && !permanentPrivileges.user_read);
+
+const banResult = await db.query('select public.add_permanent_ban($1,$2,$3) as id', [
+  'A@CJU.AC.KR', 'confirmed abuse', A,
+]);
+secured(
+  'permanent ban also blocks the active event participant',
+  banResult.rows[0].id === A3 &&
+  (await db.query('select banned from public.users where id=$1', [A3])).rows[0].banned === true &&
+  (await db.query('select banned from private.event_participants where current_user_id=$1', [A3])).rows[0].banned === true,
+);
+secured(
+  'permanent ban creates a durable email record',
+  (await db.query('select reason from public.permanent_bans where email=$1', ['a@cju.ac.kr'])).rows[0].reason === 'confirmed abuse',
+);
+secured(
+  'releasing a permanent ban does not undo the event ban',
+  (await db.query('select public.release_permanent_ban($1) as released', ['a@cju.ac.kr'])).rows[0].released === true &&
+  (await db.query('select email from public.banned_emails where email=$1', ['a@cju.ac.kr'])).rows.length === 1,
+);
+
+await db.query('select public.add_permanent_ban($1,$2,$3)', ['a@cju.ac.kr', 'confirmed abuse', A]);
+await db.query('select public.begin_event_purge()');
+await db.query('select public.purge_current_event_data()');
+const thirdEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
+secured(
+  'event purge retains only the separate permanent ban',
+  (await db.query('select count(*)::int as n from public.permanent_bans')).rows[0].n === 1 &&
+  (await db.query('select count(*)::int as n from public.banned_emails')).rows[0].n === 0,
+);
+await expectDbError(
+  'a permanently banned email cannot register in the next event',
+  () => register(thirdEventId, A3, 'a@cju.ac.kr', 'f'.repeat(64)),
+  'PERMANENTLY_BANNED',
+);
+await owner();
+await db.query('select public.release_permanent_ban($1)', ['a@cju.ac.kr']);
+secured(
+  'release permits registration in a future event',
+  (await register(thirdEventId, A3, 'a@cju.ac.kr', 'f'.repeat(64))).rows[0].remaining === 1,
+);
+
+await owner();
+await db.query('select public.add_permanent_ban($1,$2,$3)', ['a@cju.ac.kr', 'confirmed abuse', A]);
+secured(
+  'cross-event ban expires six calendar months after creation',
+  (await db.query(`
+    select expires_at = created_at + interval '6 months' as correct
+      from public.permanent_bans where email=$1
+  `, ['a@cju.ac.kr'])).rows[0].correct === true,
+);
+await db.query("update public.permanent_bans set expires_at=now()-interval '1 second' where email=$1", ['a@cju.ac.kr']);
+secured(
+  'expired cross-event ban does not lift the current event ban',
+  (await db.query('select count(*)::int as n from public.banned_emails where email=$1', ['a@cju.ac.kr'])).rows[0].n === 1,
+);
+await db.query('select public.begin_event_purge()');
+await db.query('select public.purge_current_event_data()');
+const fourthEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
+secured(
+  'an expired ban cannot block a new event even before cleanup runs',
+  (await register(fourthEventId, A3, 'a@cju.ac.kr', '0'.repeat(64))).rows[0].remaining === 1,
+);
+await owner();
+await db.query('select public.session_tick()');
+secured(
+  'scheduled session tick deletes the expired email and reason',
+  (await db.query('select count(*)::int as n from public.permanent_bans')).rows[0].n === 0,
 );
 
 console.log(`Completed ${checks} security regression checks.`);
