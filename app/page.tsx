@@ -110,7 +110,7 @@ export default function Landing() {
             청주대학교 이메일(@cju.ac.kr)을 입력해주세요.
           </p>
           <Button type="submit" disabled={loading || !email || !captchaToken} className="mt-4 h-14 w-full bg-gradient-to-r from-[#3169b5] via-[#7467dc] to-[#d85dac] text-base shadow-[0_12px_28px_rgba(93,94,201,.28)] hover:brightness-105">
-            {loading ? "로그인 링크 보내는 중…" : "매직링크 받기  →"}
+            {loading ? "로그인 링크 보내는 중…" : "로그인 링크 받기  →"}
           </Button>
           <div className="mt-3 overflow-hidden rounded-xl"><AuthCaptcha key={captchaKey} onToken={setCaptchaToken} /></div>
           {error && <p role="alert" className="mt-3 rounded-xl bg-red-50/90 px-3 py-2 text-center text-xs font-medium text-red-600">{error}</p>}
