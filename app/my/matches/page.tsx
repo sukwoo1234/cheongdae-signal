@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CampusShell } from "@/components/CampusShell";
 import { PetalCard } from "@/components/PetalCard";
 import { SignalLoading } from "@/components/SignalLoading";
@@ -18,14 +19,24 @@ interface MatchRow {
 }
 
 export default function MyMatchesPage() {
+  const router = useRouter();
   const [matches, setMatches] = useState<MatchRow[] | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/matches/me")
-      .then((r) => r.json())
-      .then((d) => setMatches(d.matches ?? []));
-  }, []);
+      .then(async (response) => {
+        if (response.status === 410) {
+          router.replace("/end");
+          return null;
+        }
+        const data = await response.json().catch(() => ({}));
+        return response.ok ? data : { matches: [] };
+      })
+      .then((data) => {
+        if (data) setMatches(data.matches ?? []);
+      });
+  }, [router]);
 
   if (!matches) return <SignalLoading message="저장된 매칭을 확인하고 있어요." />;
 

@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0018_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0019_'));
 const anonymousSessionPrivileges = (await db.query(`
   select
     has_table_privilege('anon', 'public.session_config', 'select') as config,
@@ -186,6 +186,25 @@ await identity(C, 'c@cju.ac.kr');
 secured(
   'multiple viewers may choose the same card when the optional cap is blank',
   (await db.query('select * from public.consume_slot_and_reveal($1)', [cardB])).rows[0].instagram_id === 'fixture_b',
+);
+await identity(A, 'a@cju.ac.kr');
+secured(
+  'a participant can read saved match details while the event is active',
+  (await db.query('select * from public.my_matches()')).rows[0].instagram_id === 'fixture_b',
+);
+await owner();
+await db.exec("update public.session_config set ends_at=now()-interval '1 second' where id=1");
+await identity(A, 'a@cju.ac.kr');
+secured(
+  'saved match details are unavailable immediately after the event ends',
+  (await db.query('select * from public.my_matches()')).rows.length === 0,
+);
+await owner();
+await db.exec("update public.session_config set ends_at=now()+interval '1 hour' where id=1");
+await identity(A, 'a@cju.ac.kr');
+secured(
+  'extending an unpurged event restores saved match access',
+  (await db.query('select * from public.my_matches()')).rows[0].instagram_id === 'fixture_b',
 );
 await owner();
 await db.query('select * from public.grant_event_slot($1)', [C]);
