@@ -401,8 +401,8 @@ export default function AdminConsole() {
         </div>
 
         <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          <Metric label="남자 등록" value={stats.male} meta={`목표 ${stats.config.threshold_male}명`} accent="text-[#77a7ff]" />
-          <Metric label="여자 등록" value={stats.female} meta={`목표 ${stats.config.threshold_female}명`} accent="text-[#f28db2]" />
+          <Metric label="남자 카드" value={stats.male} meta={`목표 ${stats.config.threshold_male}장`} accent="text-[#77a7ff]" />
+          <Metric label="여자 카드" value={stats.female} meta={`목표 ${stats.config.threshold_female}장`} accent="text-[#f28db2]" />
           <Metric label="누적 매칭" value={stats.matches} meta="선택 완료" accent="text-[#e8e8ec]" />
           <Metric label="보드 상태" value={phase.label} meta={stats.config.force_locked ? "관리자가 잠금" : "자동 제어"} accent={phase.tone} />
         </section>

@@ -9,20 +9,20 @@ export async function GET() {
   const admin = createAdminClient();
 
   const [
-    { count: m },
-    { count: f },
+    { data: counts },
     { count: matches },
     { data: cfg },
   ] = await Promise.all([
-    admin.from("users").select("id", { count: "exact", head: true }).eq("gender", "M"),
-    admin.from("users").select("id", { count: "exact", head: true }).eq("gender", "F"),
+    admin.rpc("gender_counts").single(),
     admin.from("matches").select("id", { count: "exact", head: true }),
     admin.from("session_config").select("*").eq("id", 1).single(),
   ]);
 
+  const cardCounts = (counts ?? { male: 0, female: 0 }) as { male: number; female: number };
+
   return NextResponse.json({
-    male: m ?? 0,
-    female: f ?? 0,
+    male: cardCounts.male ?? 0,
+    female: cardCounts.female ?? 0,
     matches: matches ?? 0,
     config: cfg,
   });

@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0019_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0020_'));
 const anonymousSessionPrivileges = (await db.query(`
   select
     has_table_privilege('anon', 'public.session_config', 'select') as config,
@@ -152,6 +152,13 @@ await owner();
 await db.exec(`
   update public.users set gender='M' where id='${C}';
   update public.users set gender='F' where id in ('${B}','${D}');
+`);
+const countsWithoutCards = (await db.query('select * from public.gender_counts()')).rows[0];
+secured(
+  'onboarded users without cards do not count toward board opening',
+  countsWithoutCards.male === 0 && countsWithoutCards.female === 0,
+);
+await db.exec(`
   insert into public.cards(id,user_id,one_liner,instagram_id,color) values
     ('${cardA}','${A}','A','fixture_a','yellow'),
     ('${cardB}','${B}','B','fixture_b','pink'),
@@ -162,6 +169,18 @@ await db.exec(`
          threshold_male=1, threshold_female=1, max_views_per_card=1, force_locked=false
    where id=1;
 `);
+const visibleCardCounts = (await db.query('select * from public.gender_counts()')).rows[0];
+secured(
+  'visible completed cards count toward board opening by gender',
+  visibleCardCounts.male === 2 && visibleCardCounts.female === 2,
+);
+await db.query('update public.cards set hidden_by_admin=true where id=$1', [cardA]);
+const countsWithHiddenCard = (await db.query('select * from public.gender_counts()')).rows[0];
+secured(
+  'hidden cards do not count toward board opening',
+  countsWithHiddenCard.male === 1 && countsWithHiddenCard.female === 2,
+);
+await db.query('update public.cards set hidden_by_admin=false where id=$1', [cardA]);
 
 await identity(A, 'a@cju.ac.kr');
 secured(

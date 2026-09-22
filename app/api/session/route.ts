@@ -11,8 +11,8 @@ export async function GET() {
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
-  // 인원 집계는 반드시 RPC로 해야 한다. users에는 "본인 행만" RLS가 걸려 있어서
-  // 사용자 컨텍스트로 count하면 항상 자기 자신 1명(또는 0명)만 세어진다.
+  // 공개 가능한 카드 집계는 반드시 RPC로 해야 한다. cards에는 RLS가 걸려 있어서
+  // 사용자 컨텍스트의 단순 count와 보드 개방 판정이 달라질 수 있다.
   const [{ data: cfg }, { data: counts }, { data: boardOpen }] = await Promise.all([
     supabase.from("session_config").select("*").eq("id", 1).single(),
     supabase.rpc("gender_counts").single(),
