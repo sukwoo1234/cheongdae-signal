@@ -19,15 +19,27 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 
   const { data: m } = await admin
     .from("matches")
-    .select("id, bonus, viewed_card_id, cards!inner(one_liner)")
-    .eq("viewer_user_id", u.id);
+    .select("id, bonus, viewed_card_id, created_at, cards!inner(one_liner)")
+    .eq("viewer_user_id", u.id)
+    .order("created_at", { ascending: true });
 
   const { data: slotRows, error: slotError } = await admin.rpc("admin_event_participant_state", {
     p_user_id: u.id,
   });
   if (slotError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   const slot = Array.isArray(slotRows) ? slotRows[0] : slotRows;
-  const lastViewed = (m ?? [])[0];
+  type ViewedMatchRow = {
+    id: string;
+    bonus: boolean;
+    created_at: string;
+    cards: { one_liner: string };
+  };
+  const viewedCards = ((m ?? []) as unknown as ViewedMatchRow[]).map((match) => ({
+    match_id: match.id,
+    one_liner: match.cards.one_liner,
+    bonus: match.bonus,
+    created_at: match.created_at,
+  }));
 
   return NextResponse.json({
     id: u.id,
@@ -38,6 +50,6 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     allowance: slot?.allowance ?? 0,
     used: slot?.used ?? 0,
     remaining: slot?.remaining ?? 0,
-    viewed_card_oneliner: lastViewed ? (lastViewed.cards as unknown as { one_liner: string }).one_liner : null,
+    viewed_cards: viewedCards,
   });
 }

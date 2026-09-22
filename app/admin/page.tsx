@@ -31,7 +31,12 @@ interface UserInfo {
   allowance: number;
   used: number;
   remaining: number;
-  viewed_card_oneliner: string | null;
+  viewed_cards: Array<{
+    match_id: string;
+    one_liner: string;
+    bonus: boolean;
+    created_at: string;
+  }>;
 }
 
 interface PermanentBan {
@@ -539,7 +544,26 @@ export default function AdminConsole() {
                     <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{userInfo.email}</p><p className="mt-1 text-[9px] text-[#666670]">{userInfo.gender ?? "미설정"} · 선택 기회 {userInfo.remaining}회 남음 ({userInfo.used}/{userInfo.allowance} 사용)</p></div>
                     <span className={`rounded px-1.5 py-0.5 text-[8px] font-medium ${userInfo.banned ? "bg-[#35191f] text-[#ff7185]" : "bg-[#183029] text-[#58c9ad]"}`}>{userInfo.banned ? "차단됨" : "정상"}</span>
                   </div>
-                  <div className="mt-3 rounded-md bg-white/[0.035] px-3 py-2 text-[9px] text-[#85858f]">열람 카드 · {userInfo.viewed_card_oneliner ?? "없음"}</div>
+                  <div className="mt-3 rounded-md bg-white/[0.035] px-3 py-2.5">
+                    <p className="text-[9px] font-medium text-[#85858f]">열람 카드 · {userInfo.viewed_cards.length}건</p>
+                    {userInfo.viewed_cards.length === 0 ? (
+                      <p className="mt-2 text-[9px] text-[#666670]">아직 열람한 카드가 없습니다.</p>
+                    ) : (
+                      <div className="mt-2 space-y-1.5">
+                        {userInfo.viewed_cards.map((card, index) => (
+                          <div key={card.match_id} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-black/10 px-2.5 py-2">
+                            <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold ${card.bonus ? "bg-[#2a2346] text-[#b8adff]" : "bg-[#183029] text-[#58c9ad]"}`}>
+                              {card.bonus
+                                ? `추가 선택 ${userInfo.viewed_cards.slice(0, index + 1).filter((item) => item.bonus).length}`
+                                : "기본 선택"}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-[10px] text-[#d4d4d9]">{card.one_liner}</span>
+                            <span className="shrink-0 text-[8px] text-[#55555e]">{formatTime(card.created_at)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="mt-3 flex gap-2">
                     <button onClick={() => void grantSlot(userInfo.id)} className="rounded-md border border-[#3e376f] bg-[#19172a] px-2.5 py-1.5 text-[9px] font-medium text-[#afa5ff]">선택 기회 +1</button>
                     <button onClick={() => void banUser(userInfo.id)} className="rounded-md border border-[#51252e] px-2.5 py-1.5 text-[9px] font-medium text-[#ff7185]">사용자 차단</button>
