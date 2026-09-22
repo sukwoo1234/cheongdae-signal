@@ -9,21 +9,25 @@ export async function GET() {
   const admin = createAdminClient();
 
   const [
-    { data: counts },
-    { count: matches },
-    { data: cfg },
+    { data: counts, error: countsError },
+    { data: cumulativeMatches, error: matchesError },
+    { data: cfg, error: configError },
   ] = await Promise.all([
     admin.rpc("gender_counts").single(),
-    admin.from("matches").select("id", { count: "exact", head: true }),
+    admin.rpc("admin_event_match_count"),
     admin.from("session_config").select("*").eq("id", 1).single(),
   ]);
+
+  if (countsError || matchesError || configError || !cfg) {
+    return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  }
 
   const cardCounts = (counts ?? { male: 0, female: 0 }) as { male: number; female: number };
 
   return NextResponse.json({
     male: cardCounts.male ?? 0,
     female: cardCounts.female ?? 0,
-    matches: matches ?? 0,
+    matches: cumulativeMatches ?? 0,
     config: cfg,
   });
 }

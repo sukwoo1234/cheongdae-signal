@@ -49,7 +49,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0020_'));
+secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0021_'));
 const anonymousSessionPrivileges = (await db.query(`
   select
     has_table_privilege('anon', 'public.session_config', 'select') as config,
@@ -212,6 +212,11 @@ secured(
   (await db.query('select * from public.my_matches()')).rows[0].instagram_id === 'fixture_b',
 );
 await owner();
+secured(
+  'the admin cumulative match count uses the durable anonymous event ledger',
+  (await db.query('select public.admin_event_match_count() as n')).rows[0].n === 2,
+);
+await owner();
 await db.exec("update public.session_config set ends_at=now()-interval '1 second' where id=1");
 await identity(A, 'a@cju.ac.kr');
 secured(
@@ -231,6 +236,11 @@ await db.exec('update public.session_config set max_views_per_card=1 where id=1'
 
 await owner();
 await db.query('delete from public.cards where id=$1', [cardB]);
+secured(
+  'deleting a selected card removes match details without reducing the cumulative count',
+  (await db.query('select count(*)::int as n from public.matches')).rows[0].n === 0 &&
+  (await db.query('select public.admin_event_match_count() as n')).rows[0].n === 2,
+);
 await identity(A, 'a@cju.ac.kr');
 await expectDbError(
   'deleting only a viewed card cannot restore the viewer slot',
