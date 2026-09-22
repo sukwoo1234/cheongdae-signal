@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BoardGrid } from "@/components/BoardGrid";
-import { RatioCounter } from "@/components/RatioCounter";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { RevealModal } from "@/components/RevealModal";
 import { CountdownBanner } from "@/components/CountdownBanner";
@@ -181,7 +180,6 @@ export default function BoardPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/board" className="hidden sm:block"><SignalBrand compact /></Link>
-            <RatioCounter initialMale={sessionState.counts.male} initialFemale={sessionState.counts.female} />
             {slot && (
               <span
                 aria-label={`선택 기회 ${slot.remaining}회 남음`}
