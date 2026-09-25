@@ -19,7 +19,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 
   const { data: m } = await admin
     .from("matches")
-    .select("id, bonus, viewed_card_id, created_at, cards!inner(one_liner)")
+    .select("id, bonus, selection_number, viewed_card_id, created_at, cards!inner(one_liner)")
     .eq("viewer_user_id", u.id)
     .order("created_at", { ascending: true });
 
@@ -31,6 +31,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   type ViewedMatchRow = {
     id: string;
     bonus: boolean;
+    selection_number: number;
     created_at: string;
     cards: { one_liner: string };
   };
@@ -38,6 +39,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     match_id: match.id,
     one_liner: match.cards.one_liner,
     bonus: match.bonus,
+    selection_number: match.selection_number,
     created_at: match.created_at,
   }));
 

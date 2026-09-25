@@ -7,7 +7,7 @@ interface GenderCounts {
 }
 
 export async function GET() {
-  const { supabase, user, denial } = await getActiveUser();
+  const { supabase, user, profile, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
@@ -35,6 +35,7 @@ export async function GET() {
 
   return NextResponse.json({
     config: cfg,
+    viewer_gender: profile?.gender ?? null,
     counts: { male, female },
     // 실제 접근 통제와 동일한 판정을 쓴다 (DB가 단일 기준).
     board_open: boardOpen === true && !cfg.force_locked,

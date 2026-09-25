@@ -3,32 +3,36 @@
 import { useEffect, useState } from "react";
 import { PetalCard } from "@/components/PetalCard";
 import { PostitColor } from "@/lib/constants";
+import type { Gender } from "@/lib/types";
 
 interface BoardCard {
   id: string;
   one_liner: string;
   color: PostitColor;
+  gender: Gender;
 }
 
 interface Props {
   onCardClick: (card: BoardCard) => void;
   reloadKey?: number;
+  targetGender?: Gender;
 }
 
-export function BoardGrid({ onCardClick, reloadKey }: Props) {
+export function BoardGrid({ onCardClick, reloadKey, targetGender }: Props) {
   const [cards, setCards] = useState<BoardCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/board")
+    const query = targetGender ? `?gender=${targetGender}` : "";
+    fetch(`/api/board${query}`)
       .then((r) => r.json())
       .then((d) => {
         setCards(d.cards ?? []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [reloadKey]);
+  }, [reloadKey, targetGender]);
 
   if (loading) return <p className="py-20 text-center text-sm text-[#8390a2]">카드를 불러오는 중…</p>;
   if (cards.length === 0) {

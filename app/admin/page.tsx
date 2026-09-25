@@ -35,6 +35,7 @@ interface UserInfo {
     match_id: string;
     one_liner: string;
     bonus: boolean;
+    selection_number: number;
     created_at: string;
   }>;
 }
@@ -52,6 +53,8 @@ interface SessionDraft {
   thresholdMale: number;
   thresholdFemale: number;
   maxViews: string;
+  boardMode: "opposite" | "selectable";
+  baseAllowance: 1 | 2;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -73,6 +76,8 @@ function draftFromConfig(config: SessionConfig): SessionDraft {
     thresholdMale: config.threshold_male,
     thresholdFemale: config.threshold_female,
     maxViews: config.max_views_per_card?.toString() ?? "",
+    boardMode: config.board_mode,
+    baseAllowance: config.base_selection_allowance,
   };
 }
 
@@ -177,6 +182,8 @@ export default function AdminConsole() {
         threshold_male: draft.thresholdMale,
         threshold_female: draft.thresholdFemale,
         max_views_per_card: maxViews,
+        board_mode: draft.boardMode,
+        base_selection_allowance: draft.baseAllowance,
       }),
     });
     const data = (await response.json().catch(() => ({}))) as { error?: string };
@@ -186,6 +193,9 @@ export default function AdminConsole() {
         INVALID_TIMESTAMP: "날짜와 시간을 다시 확인해주세요.",
         INVALID_THRESHOLD: "필요 인원은 1명 이상이어야 합니다.",
         INVALID_MAX_VIEWS: "카드 열람 상한을 다시 확인해주세요.",
+        INVALID_BOARD_MODE: "보드 모드를 다시 선택해주세요.",
+        INVALID_BASE_ALLOWANCE: "기본 선택 기회를 다시 선택해주세요.",
+        EVENT_RULES_LOCKED: "행사가 시작되어 보드 모드와 기본 선택 기회는 변경할 수 없습니다.",
       };
       setSaveState("error");
       setSaveMessage(messages[data.error ?? ""] ?? "저장하지 못했습니다. 다시 시도해주세요.");
@@ -194,7 +204,7 @@ export default function AdminConsole() {
 
     await loadStats(true);
     setSaveState("saved");
-    setSaveMessage("변경사항이 프로덕션에 반영됐습니다.");
+    setSaveMessage("변경사항이 반영됐습니다.");
     window.setTimeout(() => setSaveState("idle"), 2500);
   }
 
@@ -380,6 +390,7 @@ export default function AdminConsole() {
       : now >= ends
         ? { label: "종료됨", tone: "text-[#85858f]", dot: "bg-[#666670]" }
         : { label: "운영 중", tone: "text-[#5dd6b9]", dot: "bg-[#4fd1b2]" };
+  const eventRulesLocked = now >= starts;
 
   return (
     <main className="min-h-screen bg-[#08090b] text-[#e8e8ec]">
@@ -435,6 +446,43 @@ export default function AdminConsole() {
                     { label: "+1시간", onClick: () => setDraft({ ...draft, endsAt: shiftLocal(draft.endsAt, 60) }) },
                   ]}
                 />
+              </div>
+
+              <div className="border-t border-white/[0.07]" />
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <span className="mb-2 block text-[11px] font-medium text-[#a4a4ad]">보드 모드</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([[
+                      "opposite",
+                      "이성 보드",
+                    ], ["selectable", "선택형 보드"]] as const).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={eventRulesLocked}
+                        onClick={() => { setDraft({ ...draft, boardMode: value }); setSaveState("idle"); }}
+                        className={`h-10 rounded-lg border text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${draft.boardMode === value ? "border-[#7c6ff0] bg-[#211d3c] text-[#c2baff]" : "border-white/[0.09] bg-[#0c0d10] text-[#85858f]"}`}
+                      >{label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-2 block text-[11px] font-medium text-[#a4a4ad]">기본 선택 기회</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([1, 2] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={eventRulesLocked}
+                        onClick={() => { setDraft({ ...draft, baseAllowance: value }); setSaveState("idle"); }}
+                        className={`h-10 rounded-lg border text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${draft.baseAllowance === value ? "border-[#7c6ff0] bg-[#211d3c] text-[#c2baff]" : "border-white/[0.09] bg-[#0c0d10] text-[#85858f]"}`}
+                      >{value}회</button>
+                    ))}
+                  </div>
+                  <span className="mt-1.5 block text-[9px] leading-4 text-[#666670]">행사 시작 후에는 두 설정이 고정됩니다.</span>
+                </div>
               </div>
 
               <div className="border-t border-white/[0.07]" />
@@ -550,12 +598,10 @@ export default function AdminConsole() {
                       <p className="mt-2 text-[9px] text-[#666670]">아직 열람한 카드가 없습니다.</p>
                     ) : (
                       <div className="mt-2 space-y-1.5">
-                        {userInfo.viewed_cards.map((card, index) => (
+                        {userInfo.viewed_cards.map((card) => (
                           <div key={card.match_id} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-black/10 px-2.5 py-2">
                             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold ${card.bonus ? "bg-[#2a2346] text-[#b8adff]" : "bg-[#183029] text-[#58c9ad]"}`}>
-                              {card.bonus
-                                ? `추가 선택 ${userInfo.viewed_cards.slice(0, index + 1).filter((item) => item.bonus).length}`
-                                : "기본 선택"}
+                              선택 {card.selection_number}{card.bonus ? " · 관리자 추가" : ""}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-[10px] text-[#d4d4d9]">{card.one_liner}</span>
                             <span className="shrink-0 text-[8px] text-[#55555e]">{formatTime(card.created_at)}</span>

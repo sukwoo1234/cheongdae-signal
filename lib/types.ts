@@ -1,6 +1,7 @@
 import type { PostitColor } from "./constants";
 
 export type Gender = "M" | "F";
+export type BoardMode = "opposite" | "selectable";
 
 export interface User {
   id: string;
@@ -29,6 +30,7 @@ export interface BoardCard {
   id: string;
   one_liner: string;
   color: PostitColor;
+  gender: Gender;
 }
 
 /** my_card() RPC 반환 형태. cards 테이블 전체가 아니라 본인에게 허용된 필드만 담긴다. */
@@ -57,6 +59,7 @@ export interface MyMatch {
   color: PostitColor;
   instagram_id: string;
   bonus: boolean;
+  selection_number: number;
   created_at: string;
 }
 
@@ -71,6 +74,8 @@ export interface SessionConfig {
   purging: boolean;
   /** 카드 소유자당 공개 가능한 최대 인원. null이면 별도 상한 없음. */
   max_views_per_card: number | null;
+  board_mode: BoardMode;
+  base_selection_allowance: 1 | 2;
 }
 
 export interface SlotState {
@@ -81,6 +86,7 @@ export interface SlotState {
 
 export interface SessionState {
   config: SessionConfig;
+  viewer_gender: Gender | null;
   counts: { male: number; female: number };
   board_open: boolean;
   in_pregating: boolean;

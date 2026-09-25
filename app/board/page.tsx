@@ -12,12 +12,13 @@ import { SignalBrand } from "@/components/SignalBrand";
 import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
-import type { SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
+import type { Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
 
 interface BoardCard {
   id: string;
   one_liner: string;
   color: PostitColor;
+  gender: Gender;
 }
 
 export default function BoardPage() {
@@ -31,6 +32,7 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [targetGender, setTargetGender] = useState<Gender | null>(null);
   const router = useRouter();
 
   const loadSession = useCallback(async () => {
@@ -68,6 +70,7 @@ export default function BoardPage() {
     const s: SessionState = await sRes.json();
     setLoadFailed(false);
     setSessionState(s);
+    setTargetGender((current) => current ?? (s.viewer_gender === "M" ? "F" : "M"));
     setMyCard(mc.card ?? null);
     setSlot(mm.slot ?? null);
     setHasUsedSlot(mm.slot ? mm.slot.remaining <= 0 : ((mm.matches ?? []) as MyMatch[]).length > 0);
@@ -201,6 +204,25 @@ export default function BoardPage() {
       </header>
 
       <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
+        {sessionState.config.board_mode === "selectable" && (
+          <div className="mx-auto mb-3 flex w-fit rounded-2xl border border-white/90 bg-white/80 p-1 shadow-sm backdrop-blur">
+            {(["M", "F"] as const).map((gender) => (
+              <button
+                key={gender}
+                type="button"
+                onClick={() => setTargetGender(gender)}
+                aria-pressed={targetGender === gender}
+                className={`rounded-xl px-5 py-2 text-sm font-bold transition ${
+                  targetGender === gender
+                    ? "bg-[#0b2b4c] text-white shadow-md"
+                    : "text-[#71839d] hover:bg-white/80"
+                }`}
+              >
+                {gender === "M" ? "남학생 보드" : "여학생 보드"}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mb-4 px-1 text-center sm:text-left">
           <p className="text-xs text-[#7186a3]">카드를 열면 선택 기회가 사용되고 상대가 등록한 정보가 공개됩니다.</p>
           <h1 className="signal-handwriting mt-7 text-[38px] font-normal leading-[1.12] tracking-normal text-[#4e6f9b] sm:text-[48px]">
@@ -215,6 +237,7 @@ export default function BoardPage() {
         </div>
         <BoardGrid
           reloadKey={reloadKey}
+          targetGender={sessionState.config.board_mode === "selectable" ? (targetGender ?? undefined) : undefined}
           onCardClick={(c) => {
             if (hasUsedSlot) {
               setError("슬롯을 이미 사용했어요. '내 매칭'에서 확인하세요.");

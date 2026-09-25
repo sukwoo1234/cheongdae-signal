@@ -15,6 +15,8 @@ const ALLOWED = [
   "threshold_female",
   "force_locked",
   "max_views_per_card",
+  "board_mode",
+  "base_selection_allowance",
 ] as const;
 
 function isValidTimestamp(v: unknown): v is string {
@@ -60,6 +62,20 @@ export async function PATCH(req: Request) {
         updates[key] = v;
         break;
 
+      case "board_mode":
+        if (v !== "opposite" && v !== "selectable") {
+          return NextResponse.json({ error: "INVALID_BOARD_MODE" }, { status: 400 });
+        }
+        updates[key] = v;
+        break;
+
+      case "base_selection_allowance":
+        if (v !== 1 && v !== 2) {
+          return NextResponse.json({ error: "INVALID_BASE_ALLOWANCE" }, { status: 400 });
+        }
+        updates[key] = v;
+        break;
+
       case "force_locked":
         if (typeof v !== "boolean") {
           return NextResponse.json({ error: "INVALID_LOCK" }, { status: 400 });
@@ -99,6 +115,11 @@ export async function PATCH(req: Request) {
   }
 
   const { error } = await admin.from("session_config").update(updates).eq("id", 1);
-  if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  if (error) {
+    if (error.message.includes("EVENT_RULES_LOCKED")) {
+      return NextResponse.json({ error: "EVENT_RULES_LOCKED" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

@@ -20,7 +20,7 @@ export default function Privacy() {
         <p className="mb-2 font-semibold text-gray-800">이용자가 직접 입력하는 정보</p>
         <ul className="list-disc pl-5 space-y-1 mb-3">
           <li>이메일 주소 (@cju.ac.kr) — 본인 확인 및 로그인</li>
-          <li>성별 (남/여) — 이성 카드 노출을 위한 필수 항목</li>
+          <li>성별 (남/여) — 카드의 보드 분류와 행사별 보드 노출 정책 적용을 위한 필수 항목</li>
           <li>한 줄 소개 (최대 20자)</li>
           <li>연락처 (인스타그램 ID, 카카오톡 ID 또는 휴대전화 번호 중 이용자가 선택한 항목)</li>
         </ul>
@@ -40,7 +40,7 @@ export default function Privacy() {
         <h2 className="font-bold text-base mb-2">2. 개인정보의 처리 목적</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>청주대학교 재학생 여부 확인 및 로그인 인증</li>
-          <li>카드 게시 및 이성 이용자에게 한 줄 소개 노출</li>
+          <li>카드 게시 및 행사별 보드 모드(이성 보드 또는 선택형 보드)에 따른 한 줄 소개 노출</li>
           <li>선택 기회 범위 내에서 이용자가 등록한 연락처 공개(매칭)</li>
           <li>부적절한 게시물에 대한 운영자의 사후 조치</li>
           <li>확인된 악용에 대한 재가입 방지</li>
@@ -73,7 +73,8 @@ export default function Privacy() {
         <h2 className="font-bold text-base mb-2">4. 개인정보의 제3자 제공</h2>
         <p>
           서비스는 이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만 매칭 기능의 성격상,
-          이용자가 등록한 <strong>한 줄 소개는 이성 이용자에게 공개</strong>되며,
+          이용자가 등록한 <strong>한 줄 소개는 운영자가 행사 시작 전에 정한 보드 모드에 따라
+          이성 이용자에게만 또는 남학생·여학생 보드를 선택한 이용자에게 공개</strong>되며,
           <strong> 등록한 연락처는 선택 기회를 사용해 해당 카드를 선택한 이용자에게만 공개</strong>되며,
           운영자가 카드별 공개 인원 상한을 설정한 경우에는 그 범위까지만 공개됩니다.
           이는 서비스의 본질적 기능이며, 카드 등록 시 이에 동의한 것으로 봅니다.
@@ -209,7 +210,7 @@ export default function Privacy() {
       <section className="mb-6">
         <h2 className="font-bold text-base mb-2">11. 처리방침의 변경</h2>
         <p>
-          이 개인정보 처리방침은 2026년 9월 20일부터 적용됩니다. 내용의 추가·삭제·수정이 있을 경우
+          이 개인정보 처리방침은 2026년 9월 25일부터 적용됩니다. 내용의 추가·삭제·수정이 있을 경우
           서비스 내 공지를 통해 알립니다.
         </p>
       </section>
