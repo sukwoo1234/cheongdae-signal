@@ -9,6 +9,7 @@ interface Stats {
   male: number;
   female: number;
   matches: number;
+  users: { cumulative: number; current: number };
   config: SessionConfig;
 }
 
@@ -405,9 +406,10 @@ export default function AdminConsole() {
           <p className="mt-1 text-xs text-[#777781]">{formatTime(stats.config.starts_at)} — {formatTime(stats.config.ends_at)}</p>
         </div>
 
-        <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
           <Metric label="남자 카드" value={stats.male} meta={`목표 ${stats.config.threshold_male}장`} accent="text-[#77a7ff]" />
           <Metric label="여자 카드" value={stats.female} meta={`목표 ${stats.config.threshold_female}장`} accent="text-[#f28db2]" />
+          <Metric label="사용자" value={`${stats.users.cumulative} / ${stats.users.current}`} meta="누적 / 현재" accent="text-[#5dd6b9]" />
           <Metric label="누적 매칭" value={stats.matches} meta="선택 완료" accent="text-[#e8e8ec]" />
           <Metric label="보드 상태" value={phase.label} meta={stats.config.force_locked ? "관리자가 잠금" : "자동 제어"} accent={phase.tone} />
         </section>
