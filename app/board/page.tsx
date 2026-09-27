@@ -218,7 +218,7 @@ export default function BoardPage() {
                     : "text-[#71839d] hover:bg-white/80"
                 }`}
               >
-                {gender === "M" ? "남학생 보드" : "여학생 보드"}
+                {gender === "M" ? "남성" : "여성"}
               </button>
             ))}
           </div>
