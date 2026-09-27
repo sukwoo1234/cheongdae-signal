@@ -205,12 +205,13 @@ describe("login security boundary", () => {
 
   it("does not expose session configuration or participant counts without an active session", async () => {
     const server = serverMock(student, "aal1", "password");
-    (server as typeof server & { rpc: ReturnType<typeof vi.fn> }).rpc = vi.fn();
+    const rpc = vi.fn();
+    Object.assign(server, { rpc });
 
     const response = await getSession();
 
     expect(response.status).toBe(401);
-    expect(server.rpc).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("fails closed when the profile/ban lookup fails", async () => {

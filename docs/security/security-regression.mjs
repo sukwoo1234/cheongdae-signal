@@ -250,6 +250,11 @@ await expectDbError(
 
 await owner();
 await db.query('delete from auth.users where id=$1', [B]);
+const afterDeparture = (await db.query('select * from public.event_purge_status()')).rows[0];
+secured(
+  'a deleted account reduces current users without reducing cumulative participants',
+  afterDeparture.participants === 4 && afterDeparture.users === 3,
+);
 await identity(A, 'a@cju.ac.kr');
 await expectDbError(
   'deleting the viewed target cannot restore the viewer slot',
