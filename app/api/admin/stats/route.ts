@@ -13,14 +13,16 @@ export async function GET() {
     { data: cumulativeMatches, error: matchesError },
     { data: participantCounts, error: participantCountsError },
     { data: cfg, error: configError },
+    { data: boardOpen, error: boardOpenError },
   ] = await Promise.all([
     admin.rpc("gender_counts").single(),
     admin.rpc("admin_event_match_count"),
     admin.rpc("event_purge_status").single(),
     admin.from("session_config").select("*").eq("id", 1).single(),
+    admin.rpc("board_is_open"),
   ]);
 
-  if (countsError || matchesError || participantCountsError || configError || !participantCounts || !cfg) {
+  if (countsError || matchesError || participantCountsError || configError || boardOpenError || !participantCounts || !cfg) {
     return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
 
@@ -32,6 +34,7 @@ export async function GET() {
     female: cardCounts.female ?? 0,
     matches: cumulativeMatches ?? 0,
     users: { cumulative: users.participants, current: users.users },
+    board_open: boardOpen === true,
     config: cfg,
   });
 }

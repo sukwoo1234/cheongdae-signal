@@ -10,6 +10,7 @@ interface Stats {
   female: number;
   matches: number;
   users: { cumulative: number; current: number };
+  board_open: boolean;
   config: SessionConfig;
 }
 
@@ -390,7 +391,9 @@ export default function AdminConsole() {
       ? { label: "시작 전", tone: "text-[#e8b85b]", dot: "bg-[#e8b85b]" }
       : now >= ends
         ? { label: "종료됨", tone: "text-[#85858f]", dot: "bg-[#666670]" }
-        : { label: "운영 중", tone: "text-[#5dd6b9]", dot: "bg-[#4fd1b2]" };
+        : !stats.board_open
+          ? { label: "준비 중", tone: "text-[#e8b85b]", dot: "bg-[#e8b85b]" }
+          : { label: "운영 중", tone: "text-[#5dd6b9]", dot: "bg-[#4fd1b2]" };
   const eventRulesLocked = now >= starts;
 
   return (
