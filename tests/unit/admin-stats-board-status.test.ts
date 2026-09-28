@@ -51,7 +51,7 @@ describe("admin board status", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.board_open).toBe(false);
-    expect(body.users).toEqual({ completed: 18, incomplete: 1 });
+    expect(body.users).toEqual({ cumulative: 19, completed: 18, incomplete: 1 });
     expect(rpc).toHaveBeenCalledWith("board_is_open");
   });
 });

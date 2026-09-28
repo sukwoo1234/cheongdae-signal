@@ -37,6 +37,7 @@ export async function GET() {
     female: cardCounts.female ?? 0,
     matches: cumulativeMatches ?? 0,
     users: {
+      cumulative: users.participants,
       completed,
       incomplete: Math.max(users.users - completed, 0),
     },
