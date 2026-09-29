@@ -10,10 +10,34 @@ import { SignalBrand } from "@/components/SignalBrand";
 export default function Landing() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaKey, setCaptchaKey] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("error")) {
+      setCheckingSession(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetch("/api/auth/resume", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { next?: unknown };
+        const allowed = new Set(["/onboarding", "/card/new", "/board", "/end", "/auth/mfa", "/admin"]);
+        if (typeof data.next === "string" && allowed.has(data.next)) {
+          router.replace(data.next);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingSession(false));
+
+    return () => controller.abort();
+  }, [router]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -103,14 +127,15 @@ export default function Landing() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-14 border-white bg-white/90 pl-12 text-base shadow-sm"
+              disabled={checkingSession || loading}
               required
             />
           </div>
           <p className="mt-2 px-1 text-[11px] font-medium text-[#687d99]">
             청주대학교 이메일(@cju.ac.kr)을 입력해주세요.
           </p>
-          <Button type="submit" disabled={loading || !email || !captchaToken} className="mt-4 h-14 w-full bg-gradient-to-r from-[#3169b5] via-[#7467dc] to-[#d85dac] text-base shadow-[0_12px_28px_rgba(93,94,201,.28)] hover:brightness-105">
-            {loading ? "로그인 링크 보내는 중…" : "로그인 링크 받기  →"}
+          <Button type="submit" disabled={checkingSession || loading || !email || !captchaToken} className="mt-4 h-14 w-full bg-gradient-to-r from-[#3169b5] via-[#7467dc] to-[#d85dac] text-base shadow-[0_12px_28px_rgba(93,94,201,.28)] hover:brightness-105">
+            {checkingSession ? "로그인 상태 확인 중…" : loading ? "로그인 링크 보내는 중…" : "로그인 링크 받기  →"}
           </Button>
           <div className="mt-3 overflow-hidden rounded-xl"><AuthCaptcha key={captchaKey} onToken={setCaptchaToken} /></div>
           {error && <p role="alert" className="mt-3 rounded-xl bg-red-50/90 px-3 py-2 text-center text-xs font-medium text-red-600">{error}</p>}
