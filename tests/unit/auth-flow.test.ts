@@ -49,9 +49,10 @@ describe("finishSignIn runtime boundary", () => {
       data: { event_id: "00000000-0000-4000-8000-000000000099", purging: false },
       error: null,
     });
-    const users = chain({ data: { gender: null, banned: false }, error: null });
+    const users = chain({ data: null, error: null });
+    users.single.mockResolvedValue({ data: { gender: null, banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null });
     const cards = chain({ data: null, count: 0, error: null });
-    mocks.createAdminClient.mockReturnValue({
+    const admin = {
       from: vi.fn((table: string) => ({
         banned_emails: bannedEmails,
         permanent_bans: permanentBans,
@@ -60,9 +61,10 @@ describe("finishSignIn runtime boundary", () => {
         cards,
       })[table]),
       rpc: vi.fn().mockResolvedValue({ error: null }),
-    });
+    };
+    mocks.createAdminClient.mockReturnValue(admin);
 
-    return { signOut, permanentBans };
+    return { signOut, permanentBans, admin };
   }
 
   beforeEach(() => {
@@ -115,6 +117,21 @@ describe("finishSignIn runtime boundary", () => {
 
     expect(next).toBe("/onboarding");
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("sends an account retained from a previous event to explicit rejoin", async () => {
+    const { signOut, admin } = useValidSession();
+    const users = admin.from("users");
+    users.maybeSingle.mockResolvedValue({ data: { gender: "M", banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null });
+    admin.rpc.mockResolvedValue({ data: [], error: null });
+
+    const next = await finishSignIn("a".repeat(43));
+
+    expect(next).toBe("/join");
+    expect(signOut).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("admin_event_participant_state", {
+      p_user_id: "student-id",
+    });
   });
 
   it("rejects a permanently banned account at the callback boundary", async () => {

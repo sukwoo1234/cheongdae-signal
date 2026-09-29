@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminContext, isAdminUser } from "@/lib/auth";
+import { getAdminContext } from "@/lib/auth";
 import { requireAjaxRequest } from "@/lib/csrf";
+import { isAccountRetentionExpired } from "@/lib/account-retention";
 
 type PurgeStatus = {
   matches: number;
@@ -57,29 +58,24 @@ export async function POST(req: Request) {
 
   let deletedAuthUsers = 0;
   if (errors.length === 0) {
-    const MAX_ROUNDS = 50;
-    for (let round = 0; round < MAX_ROUNDS; round++) {
-      const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      if (error) {
-        errors.push(`listUsers: ${error.message}`);
-        break;
-      }
-      const targets = (data?.users ?? []).filter((candidate) => !isAdminUser(candidate));
-      if (targets.length === 0) break;
-
-      let progressed = false;
+    // 보유에 동의하지 않았거나 마지막 참여 후 6개월이 지난 계정만 지운다.
+    // 회차 카드·연락처·매칭은 위 DB RPC에서 이미 모두 파기됐다.
+    const { data: accounts, error: accountsError } = await admin
+      .from("users")
+      .select("id, last_active_at, retention_accepted_at");
+    if (accountsError) {
+      errors.push(`accounts: ${accountsError.message}`);
+    } else {
+      const targets = (accounts ?? []).filter((account) => {
+        return !account.retention_accepted_at || isAccountRetentionExpired(account.last_active_at);
+      });
       for (const target of targets) {
         const { error: deleteError } = await admin.auth.admin.deleteUser(target.id);
         if (deleteError) {
           errors.push(`deleteUser(${target.id.slice(0, 8)}): ${deleteError.message}`);
         } else {
           deletedAuthUsers++;
-          progressed = true;
         }
-      }
-      if (!progressed) {
-        errors.push(`auth 계정 ${targets.length}건을 삭제하지 못했습니다`);
-        break;
       }
     }
   }
@@ -90,29 +86,29 @@ export async function POST(req: Request) {
     errors.push(`status(after): ${afterResult.error?.message ?? "missing result"}`);
   }
 
-  const { data: authAfter, error: authAfterError } = await admin.auth.admin.listUsers({
-    page: 1,
-    perPage: 200,
-  });
-  if (authAfterError) errors.push(`listUsers(final): ${authAfterError.message}`);
-  const remainingAuth = authAfterError
-    ? null
-    : (authAfter?.users ?? []).filter((candidate) => !isAdminUser(candidate)).length;
+  // public.users는 auth.users를 ON DELETE CASCADE로 참조하므로 남은 프로필 수가
+  // 바로 보유 중인 인증 계정 수다. Auth 목록 전체를 다시 순회하지 않는다.
+  const remainingAuth = after?.users ?? null;
 
-  const databaseClean = !!after && Object.values(after).every((count) => count === 0);
-  if (errors.length === 0 && databaseClean && remainingAuth === 0) {
+  const eventDataClean = !!after &&
+    after.matches === 0 &&
+    after.cards === 0 &&
+    after.banned_emails === 0 &&
+    after.throttles === 0 &&
+    after.participants === 0;
+  if (errors.length === 0 && eventDataClean) {
     const finish = await admin.rpc("finish_event_purge");
     if (finish.error) errors.push(`finish: ${finish.error.message}`);
   }
 
-  const clean = errors.length === 0 && databaseClean && remainingAuth === 0;
+  const clean = errors.length === 0 && eventDataClean;
   return NextResponse.json(
     {
       ok: clean,
       deleted: {
         matches: before.matches,
         cards: before.cards,
-        users: before.users,
+        users: deletedAuthUsers,
         authUsers: deletedAuthUsers,
         bannedEmails: before.banned_emails,
         throttles: before.throttles,

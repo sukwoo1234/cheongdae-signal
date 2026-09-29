@@ -98,31 +98,41 @@ export function isAllowedAccount(user: AuthenticatedIdentity | null | undefined)
 export type ActiveUserDenial = "UNAUTHENTICATED" | "DOMAIN_NOT_ALLOWED" | "BANNED";
 
 /**
- * 인증 + 도메인 재검증 + 차단 확인을 한 번에 처리한다.
- * 거부 시에는 세션까지 폐기해서, 차단된 사용자가 남은 쿠키로 계속 활동하지 못하게 한다.
+ * 학교 인증 세션만 확인한다. 현재 회차 참여 원장은 요구하지 않아
+ * 이전 회차에서 유지된 계정도 재참여·탈퇴 화면에 접근할 수 있다.
  */
-export async function getActiveUser() {
+export async function getVerifiedAccount() {
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
 
   if (claimsError || !claimsData || !hasMagicLinkAuthMethod(claimsData.claims)) {
-    return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
+    return { supabase, user: null, denial: "UNAUTHENTICATED" as const };
   }
 
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) {
-    return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
+    return { supabase, user: null, denial: "UNAUTHENTICATED" as const };
   }
-
   if (!user.email_confirmed_at) {
-    await supabase.auth.signOut();
-    return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
+    await supabase.auth.signOut().catch(() => {});
+    return { supabase, user: null, denial: "UNAUTHENTICATED" as const };
+  }
+  if (!isAllowedAccount(user)) {
+    await supabase.auth.signOut().catch(() => {});
+    return { supabase, user: null, denial: "DOMAIN_NOT_ALLOWED" as const };
   }
 
-  if (!isAllowedAccount(user)) {
-    await supabase.auth.signOut();
-    return { supabase, user: null, profile: null, denial: "DOMAIN_NOT_ALLOWED" as const };
+  return { supabase, user, denial: null };
+}
+
+/**
+ * 인증 + 도메인 재검증 + 차단 확인을 한 번에 처리한다.
+ * 거부 시에는 세션까지 폐기해서, 차단된 사용자가 남은 쿠키로 계속 활동하지 못하게 한다.
+ */
+export async function getActiveUser() {
+  const { supabase, user, denial } = await getVerifiedAccount();
+  if (denial || !user) {
+    return { supabase, user: null, profile: null, denial: denial ?? "UNAUTHENTICATED" as const };
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -133,8 +143,15 @@ export async function getActiveUser() {
 
   // 프로필/RLS 조회가 실패했는데도 사용자를 활성 상태로 취급하면 DB 장애나
   // 행사 원장 누락이 인가 우회로 바뀐다. 여기서는 항상 fail closed 한다.
-  if (profileError || !profile) {
+  if (profileError) {
     await supabase.auth.signOut().catch(() => {});
+    return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
+  }
+
+  // 보유된 계정이 아직 이번 회차에 참여하지 않으면 RLS가 users 행을
+  // 보이지 않게 한다. 이는 인증 실패가 아니므로 세션을 지우지 않고 재참여
+  // 라우트로 돌아갈 수 있게 한다.
+  if (!profile) {
     return { supabase, user: null, profile: null, denial: "UNAUTHENTICATED" as const };
   }
 

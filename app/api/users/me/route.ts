@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getActiveUser, denialResponse } from "@/lib/auth";
+import { getVerifiedAccount, denialResponse, isAdminUser } from "@/lib/auth";
 import { requireAjaxRequest } from "@/lib/csrf";
 
 export async function DELETE(req: Request) {
   const csrfError = requireAjaxRequest(req);
   if (csrfError) return csrfError;
-  const { supabase, user, denial } = await getActiveUser();
+  // 현재 회차에 참여하지 않은 보유 계정도 언제든 탈퇴할 수 있어야 한다.
+  const { supabase, user, denial } = await getVerifiedAccount();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
+  if (isAdminUser(user)) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const admin = createAdminClient();
   // auth.users 삭제가 public.users/cards/matches의 FK cascade를 시작하는

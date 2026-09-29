@@ -5,6 +5,7 @@ import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/aut
 import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
 import { isAllowedCJUEmail } from "@/lib/validation/email";
 import { createEventSubjectKey } from "@/lib/event-identity";
+import { isAccountRetentionExpired } from "@/lib/account-retention";
 
 type FinishSignInOptions = {
   crossBrowserConfirmed?: boolean;
@@ -130,27 +131,82 @@ export async function finishSignIn(
     return "/?error=auth_failed";
   }
 
-  // 사용자 행 생성과 행사별 가명 원장 연결을 DB 트랜잭션 하나로 처리한다.
-  // 같은 이메일이 탈퇴 후 재가입해도 기존 allowance/used 값은 초기화하지 않는다.
-  const { error: registerError } = await admin.rpc("register_event_participant", {
-    p_event_id: config.event_id,
-    p_user_id: user.id,
-    p_email: email,
-    p_subject_key: subjectKey,
-  });
-  if (registerError) {
+  const { data: foundProfile, error: profileLookupError } = await admin
+    .from("users")
+    .select("gender, banned, last_active_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileLookupError) {
     await supabase.auth.signOut().catch(() => {});
     clearState();
-    return registerError.message.includes("PARTICIPANT_BANNED")
-      ? "/?error=banned"
-      : "/?error=auth_failed";
+    return "/?error=auth_failed";
   }
 
-  const { data: prof } = await admin
-    .from("users")
-    .select("gender, banned")
-    .eq("id", user.id)
-    .single();
+  // 6개월이 지난 계정이 새 로그인 메일로 다시 인증된 경우에는 남아 있던
+  // 프로필을 삭제하고 최초 참여자처럼 온보딩한다.
+  let existingProfile = foundProfile;
+  if (existingProfile && isAccountRetentionExpired(existingProfile.last_active_at)) {
+    const { error: expiredDeleteError } = await admin.from("users").delete().eq("id", user.id);
+    if (expiredDeleteError) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return "/?error=auth_failed";
+    }
+    existingProfile = null;
+  }
+
+  let prof = existingProfile;
+  if (existingProfile) {
+    // 이전 회차에서 인증된 계정은 로그인이 완료되어도 자동으로 현재
+    // 회차 참여자로 세지 않는다. 재참여 화면에서 버튼을 누른 뒤 원장을 연결한다.
+    const { data: participantState, error: participantError } = await admin.rpc(
+      "admin_event_participant_state",
+      { p_user_id: user.id },
+    );
+    if (participantError) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return "/?error=auth_failed";
+    }
+    const state = Array.isArray(participantState) ? participantState[0] : participantState;
+    if (!state) {
+      clearState();
+      return "/join";
+    }
+    if (state.banned) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return "/?error=banned";
+    }
+  } else {
+    // 최초 이용자의 계정 행 생성과 행사별 가명 원장 연결을 DB 트랜잭션
+    // 하나로 처리한다.
+    const { error: registerError } = await admin.rpc("register_event_participant", {
+      p_event_id: config.event_id,
+      p_user_id: user.id,
+      p_email: email,
+      p_subject_key: subjectKey,
+    });
+    if (registerError) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return registerError.message.includes("PARTICIPANT_BANNED")
+        ? "/?error=banned"
+        : "/?error=auth_failed";
+    }
+
+    const { data: createdProfile, error: createdProfileError } = await admin
+      .from("users")
+      .select("gender, banned, last_active_at")
+      .eq("id", user.id)
+      .single();
+    if (createdProfileError || !createdProfile) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return "/?error=auth_failed";
+    }
+    prof = createdProfile;
+  }
 
   if (prof?.banned) {
     await supabase.auth.signOut().catch(() => {});

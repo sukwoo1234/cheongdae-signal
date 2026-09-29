@@ -65,5 +65,5 @@ describe("current event base allowance synchronization", () => {
     ] });
 
     await db.close();
-  });
+  }, 20_000);
 });

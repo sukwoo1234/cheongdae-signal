@@ -361,10 +361,10 @@ export default function AdminConsole() {
     }
     const summary =
       `삭제 — 매칭 ${data.deleted?.matches ?? 0} · 카드 ${data.deleted?.cards ?? 0} · ` +
-      `사용자 ${data.deleted?.users ?? 0} · 계정 ${data.deleted?.authUsers ?? 0} · ` +
+      `회차 참가자 ${data.deleted?.participants ?? 0} · 만료·미동의 계정 ${data.deleted?.authUsers ?? 0} · ` +
       `차단목록 ${data.deleted?.bannedEmails ?? 0}`;
     if (data.ok) {
-      alert(`폐기 완료\n\n${summary}\n\n남은 데이터 없음.`);
+      alert(`폐기 완료\n\n${summary}\n\n보유 중인 인증 계정 ${data.remaining?.users ?? 0}건.`);
     } else {
       const left = data.remaining
         ? `\n남은 것 — 매칭 ${data.remaining.matches} · 카드 ${data.remaining.cards} · 사용자 ${data.remaining.users} · 계정 ${data.remaining.authUsers}`
@@ -553,7 +553,7 @@ export default function AdminConsole() {
                 <button onClick={wipeData} className="h-10 w-full rounded-lg border border-[#713340] bg-[#2a151a] text-[11px] font-semibold text-[#ff8495] transition hover:bg-[#35191f]">
                   행사 데이터 영구 폐기
                 </button>
-                <p className="mt-2 text-center text-[9px] leading-4 text-[#8e5962]">매칭·카드·사용자·인증 계정은 삭제하며 6개월 차단 목록은 만료 전까지 유지됩니다.</p>
+                <p className="mt-2 text-center text-[9px] leading-4 text-[#8e5962]">매칭·카드·연락처·회차 원장은 삭제합니다. 동의한 학교 인증 계정은 마지막 참여 후 최대 6개월 유지됩니다.</p>
               </div>
             </section>
           </div>

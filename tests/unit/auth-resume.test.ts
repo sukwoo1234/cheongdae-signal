@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ client: vi.fn() }));
+const mocks = vi.hoisted(() => ({ client: vi.fn(), admin: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.client }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
 
 import { GET } from "@/app/api/auth/resume/route";
 
@@ -9,11 +10,12 @@ function makeClient({
   gender = "M",
   card = { id: "card-1" } as { id: string } | null,
   endsAt = "2099-01-01T00:00:00.000Z",
+  participant = true,
 } = {}) {
   const profileQuery = {
     select: vi.fn(),
     eq: vi.fn(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: { gender, banned: false }, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { gender, banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null }),
   };
   profileQuery.select.mockReturnValue(profileQuery);
   profileQuery.eq.mockReturnValue(profileQuery);
@@ -26,6 +28,15 @@ function makeClient({
   configQuery.select.mockReturnValue(configQuery);
   configQuery.eq.mockReturnValue(configQuery);
 
+  mocks.admin.mockReturnValue({
+    auth: { admin: { deleteUser: vi.fn().mockResolvedValue({ error: null }) } },
+    from: vi.fn(() => profileQuery),
+    rpc: vi.fn().mockResolvedValue({
+      data: participant ? [{ allowance: 1, used: 0, remaining: 1, banned: false }] : [],
+      error: null,
+    }),
+  });
+
   return {
     auth: {
       getClaims: vi.fn().mockResolvedValue({
@@ -37,7 +48,7 @@ function makeClient({
         error: null,
       }),
     },
-    from: vi.fn((table: string) => table === "users" ? profileQuery : configQuery),
+    from: vi.fn(() => configQuery),
     rpc: vi.fn().mockResolvedValue({ data: card ? [card] : [], error: null }),
   };
 }
@@ -72,6 +83,12 @@ describe("auth resume", () => {
     mocks.client.mockResolvedValue(makeClient({ card: null }));
     response = await GET();
     expect(await response.json()).toEqual({ next: "/card/new" });
+  });
+
+  it("sends a retained account without a current-event ledger to rejoin", async () => {
+    mocks.client.mockResolvedValue(makeClient({ participant: false }));
+    const response = await GET();
+    expect(await response.json()).toEqual({ next: "/join" });
   });
 
   it("sends a completed participant to the end screen after the event", async () => {

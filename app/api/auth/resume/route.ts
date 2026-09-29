@@ -5,7 +5,9 @@ import {
   isAdminUser,
   isAllowedAccount,
 } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isAccountRetentionExpired } from "@/lib/account-retention";
 
 function response(next: string | null, status = 200) {
   return NextResponse.json(
@@ -34,15 +36,32 @@ export async function GET() {
     return response(requireMfa && !hasMfaAssuranceLevel(claims) ? "/auth/mfa" : "/admin");
   }
 
-  const { data: profile, error: profileError } = await supabase
+  // 현재 회차에 아직 합류하지 않은 보유 계정은 RLS로 public.users가
+  // 보이지 않는다. 서버에서 계정과 현재 회차 원장을 따로 확인한다.
+  const admin = createAdminClient();
+  const { data: profile, error: profileError } = await admin
     .from("users")
-    .select("gender, banned")
+    .select("gender, banned, retention_accepted_at, last_active_at")
     .eq("id", user.id)
     .maybeSingle();
 
-  // 이전 회차에서 삭제된 세션 등은 로그인 화면에 그대로 머무르게 한다.
   if (profileError || !profile) return response(null, 401);
+  if (isAccountRetentionExpired(profile.last_active_at)) {
+    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
+    if (deleteError) return response(null, 503);
+    await supabase.auth.signOut().catch(() => {});
+    return response(null, 401);
+  }
   if (profile.banned) return response(null, 403);
+
+  const { data: participantData, error: participantError } = await admin.rpc(
+    "admin_event_participant_state",
+    { p_user_id: user.id },
+  );
+  if (participantError) return response(null, 503);
+  const participant = Array.isArray(participantData) ? participantData[0] : participantData;
+  if (!participant) return response("/join");
+  if (participant.banned) return response(null, 403);
   if (!profile.gender) return response("/onboarding");
 
   const [{ data: cardData, error: cardError }, { data: config, error: configError }] =

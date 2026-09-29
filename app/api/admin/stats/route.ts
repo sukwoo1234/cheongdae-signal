@@ -39,8 +39,9 @@ export async function GET() {
     users: {
       cumulative: users.participants,
       completed,
-      incomplete: Math.max(users.users - completed, 0),
+      incomplete: Math.max(users.participants - completed, 0),
     },
+    retained_accounts: users.users,
     board_open: boardOpen === true,
     config: cfg,
   });

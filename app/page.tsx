@@ -28,7 +28,7 @@ export default function Landing() {
       .then(async (response) => {
         if (!response.ok) return;
         const data = (await response.json()) as { next?: unknown };
-        const allowed = new Set(["/onboarding", "/card/new", "/board", "/end", "/auth/mfa", "/admin"]);
+        const allowed = new Set(["/join", "/onboarding", "/card/new", "/board", "/end", "/auth/mfa", "/admin"]);
         if (typeof data.next === "string" && allowed.has(data.next)) {
           router.replace(data.next);
         }
