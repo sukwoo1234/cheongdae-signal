@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
 import { GraduationCapBadge } from "@/components/GraduationCapBadge";
-import { InstagramIcon, PaletteIcon } from "@/components/FieldIcons";
+import { PaletteIcon } from "@/components/FieldIcons";
+import { ContactMethodTabs } from "@/components/ContactMethodTabs";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
+import type { ContactType } from "@/lib/validation/contact";
 
 export default function NewCard() {
   const [oneLiner, setOneLiner] = useState("");
   const [contactValue, setContactValue] = useState("");
+  const [contactType, setContactType] = useState<ContactType>("instagram");
   const [color, setColor] = useState<PostitColor>(POSTIT_COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export default function NewCard() {
       body: JSON.stringify({
         one_liner: oneLiner.trim(),
         instagram_id: contactValue.trim(),
+        contact_type: contactType,
         color,
       }),
     });
@@ -48,6 +52,7 @@ export default function NewCard() {
         PROFANITY_DETECTED: "비속어가 포함되어 있어요",
         PHONE_DETECTED: "전화번호는 적을 수 없어요",
         INVALID_CONTACT: "인스타그램 ID, 카톡 ID 또는 휴대전화 번호 형식을 확인해주세요",
+        INVALID_CONTACT_TYPE: "연락 방법을 다시 선택해주세요",
         INVALID_COLOR: "색상이 잘못됐어요",
         ALREADY_HAS_CARD: "이미 카드를 만들었어요",
       };
@@ -80,17 +85,12 @@ export default function NewCard() {
           {[...oneLiner].length}/{ONELINER_MAX_LENGTH}
         </div>
 
-        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#3f5677]">
-          <InstagramIcon />
-          인스타그램 ID 또는 카톡 ID
-        </label>
-        <Input
-          placeholder="인스타그램 · 카톡 ID · 휴대전화 번호"
-          className="h-14 text-base"
+        <ContactMethodTabs
+          type={contactType}
           value={contactValue}
-          onChange={(e) => setContactValue(e.target.value)}
+          onTypeChange={setContactType}
+          onValueChange={setContactValue}
         />
-        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">해당하는 게 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
 
         <label className="mb-3 mt-6 flex items-center gap-2 text-sm font-bold text-[#3f5677]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />

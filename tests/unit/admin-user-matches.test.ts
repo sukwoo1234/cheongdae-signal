@@ -26,8 +26,8 @@ describe("admin user match history", () => {
     userQuery.eq.mockReturnValue(userQuery);
 
     const matchRows = [
-      { id: "match-1", bonus: false, selection_number: 1, created_at: "2026-09-21T01:00:00Z", cards: { one_liner: "첫 카드" } },
-      { id: "match-2", bonus: true, selection_number: 3, created_at: "2026-09-21T02:00:00Z", cards: { one_liner: "세 번째 카드" } },
+      { id: "match-1", bonus: false, selection_number: 1, created_at: "2026-09-21T01:00:00Z", cards: { one_liner: "첫 카드", users: { email: "first@cju.ac.kr", gender: "F" } } },
+      { id: "match-2", bonus: true, selection_number: 3, created_at: "2026-09-21T02:00:00Z", cards: { one_liner: "세 번째 카드", users: { email: "third@cju.ac.kr", gender: "M" } } },
     ];
     const matchQuery = {
       select: vi.fn(),
@@ -55,8 +55,8 @@ describe("admin user match history", () => {
     expect(response.status).toBe(200);
     expect(matchQuery.order).toHaveBeenCalledWith("created_at", { ascending: true });
     expect(body.viewed_cards).toEqual([
-      { match_id: "match-1", one_liner: "첫 카드", bonus: false, selection_number: 1, created_at: "2026-09-21T01:00:00Z" },
-      { match_id: "match-2", one_liner: "세 번째 카드", bonus: true, selection_number: 3, created_at: "2026-09-21T02:00:00Z" },
+      { match_id: "match-1", one_liner: "첫 카드", target_email: "first@cju.ac.kr", target_gender: "F", bonus: false, selection_number: 1, created_at: "2026-09-21T01:00:00Z" },
+      { match_id: "match-2", one_liner: "세 번째 카드", target_email: "third@cju.ac.kr", target_gender: "M", bonus: true, selection_number: 3, created_at: "2026-09-21T02:00:00Z" },
     ]);
   });
 });

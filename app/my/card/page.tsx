@@ -9,14 +9,17 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampusShell } from "@/components/CampusShell";
 import { SignalLoading } from "@/components/SignalLoading";
-import { InstagramIcon, PaletteIcon } from "@/components/FieldIcons";
+import { PaletteIcon } from "@/components/FieldIcons";
+import { ContactMethodTabs } from "@/components/ContactMethodTabs";
 import { ONELINER_MAX_LENGTH, PostitColor } from "@/lib/constants";
 import type { MyCard } from "@/lib/types";
+import type { ContactType } from "@/lib/validation/contact";
 
 export default function MyCardPage() {
   const [card, setCard] = useState<MyCard | null>(null);
   const [oneLiner, setOneLiner] = useState("");
   const [contactValue, setContactValue] = useState("");
+  const [contactType, setContactType] = useState<ContactType>("instagram");
   const [color, setColor] = useState<PostitColor>("yellow");
   const [saving, setSaving] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -30,6 +33,7 @@ export default function MyCardPage() {
         if (d.card) {
           setOneLiner(d.card.one_liner);
           setContactValue(d.card.instagram_id);
+          setContactType(d.card.contact_type);
           setColor(d.card.color);
           setHidden(d.card.hidden_by_user);
         }
@@ -44,7 +48,7 @@ export default function MyCardPage() {
         "Content-Type": "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, color }),
+      body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, contact_type: contactType, color }),
     });
     setSaving(false);
   }
@@ -95,14 +99,12 @@ export default function MyCardPage() {
             if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
           }}
         />
-        <label className="mb-2 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><InstagramIcon />인스타그램 ID 또는 카톡 ID</label>
-        <Input
-          className="h-14 text-base"
-          placeholder="인스타그램 · 카톡 ID · 휴대전화 번호"
+        <ContactMethodTabs
+          type={contactType}
           value={contactValue}
-          onChange={(e) => setContactValue(e.target.value)}
+          onTypeChange={setContactType}
+          onValueChange={setContactValue}
         />
-        <p className="mt-1.5 text-[10px] leading-4 text-[#8795a8]">해당하는 게 없다면 휴대전화 번호를 입력해도 돼요. 선택한 상대에게만 공개됩니다.</p>
         <label className="mb-3 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={setColor} />
 

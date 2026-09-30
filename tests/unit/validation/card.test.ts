@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateOneLiner, validateContactValue, validateColor } from "@/lib/validation/card";
+import { validateOneLiner, validateContactType, validateContactValue, validateColor } from "@/lib/validation/card";
 import { containsPhoneNumber } from "@/lib/validation/phone";
 
 describe("validateOneLiner", () => {
@@ -50,25 +50,32 @@ describe("containsPhoneNumber — 우회 표기", () => {
 
 describe("validateContactValue", () => {
   it("strips a leading @ and surrounding space", () => {
-    expect(validateContactValue("  @cju_signal ")).toEqual({ value: "cju_signal" });
+    expect(validateContactValue("  @cju_signal ", "instagram")).toEqual({ value: "cju_signal" });
   });
 
   it("accepts and normalizes Korean mobile phone numbers", () => {
-    expect(validateContactValue("010-1234-5678")).toEqual({ value: "01012345678" });
-    expect(validateContactValue("０１０ １２３４ ５６７８")).toEqual({ value: "01012345678" });
+    expect(validateContactValue("010-1234-5678", "phone")).toEqual({ value: "01012345678" });
+    expect(validateContactValue("０１０ １２３４ ５６７８", "phone")).toEqual({ value: "01012345678" });
   });
 
   it("rejects invalid contact values", () => {
-    expect(validateContactValue("").error).toBe("INVALID_CONTACT");
-    expect(validateContactValue("has space").error).toBe("INVALID_CONTACT");
-    expect(validateContactValue("한글아이디").error).toBe("INVALID_CONTACT");
-    expect(validateContactValue("010-12-34").error).toBe("INVALID_CONTACT");
-    expect(validateContactValue("a".repeat(31)).error).toBe("INVALID_CONTACT");
-    expect(validateContactValue(null).error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("", "instagram").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("has space", "instagram").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("한글아이디", "kakao").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("010-12-34", "phone").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue("a".repeat(31), "instagram").error).toBe("INVALID_CONTACT");
+    expect(validateContactValue(null, "instagram").error).toBe("INVALID_CONTACT");
   });
 
   it("accepts a 30-char id", () => {
-    expect(validateContactValue("a".repeat(30)).error).toBeUndefined();
+    expect(validateContactValue("a".repeat(30), "instagram").error).toBeUndefined();
+  });
+
+  it("requires a supported contact type", () => {
+    expect(validateContactType("instagram")).toEqual({ value: "instagram" });
+    expect(validateContactType("kakao")).toEqual({ value: "kakao" });
+    expect(validateContactType("phone")).toEqual({ value: "phone" });
+    expect(validateContactType("email").error).toBe("INVALID_CONTACT_TYPE");
   });
 });
 

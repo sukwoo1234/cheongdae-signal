@@ -47,5 +47,5 @@ export async function POST(req: Request) {
   if (!row?.instagram_id) {
     return NextResponse.json({ error: "RPC_ERROR" }, { status: 500 });
   }
-  return NextResponse.json({ instagram_id: row.instagram_id });
+  return NextResponse.json({ instagram_id: row.instagram_id, contact_type: row.contact_type });
 }

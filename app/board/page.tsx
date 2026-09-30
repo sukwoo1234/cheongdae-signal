@@ -13,6 +13,7 @@ import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
 import type { PostitColor } from "@/lib/constants";
 import type { Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
+import type { ContactType } from "@/lib/validation/contact";
 
 interface BoardCard {
   id: string;
@@ -25,7 +26,7 @@ export default function BoardPage() {
   const [sessionState, setSessionState] = useState<SessionState | null>(null);
   const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [pending, setPending] = useState<BoardCard | null>(null);
-  const [revealed, setRevealed] = useState<{ card: BoardCard; contactValue: string } | null>(null);
+  const [revealed, setRevealed] = useState<{ card: BoardCard; contactValue: string; contactType: ContactType } | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [slot, setSlot] = useState<SlotState | null>(null);
   const [hasUsedSlot, setHasUsedSlot] = useState(false);
@@ -119,7 +120,7 @@ export default function BoardPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      setRevealed({ card: pending, contactValue: data.instagram_id });
+      setRevealed({ card: pending, contactValue: data.instagram_id, contactType: data.contact_type });
       setPending(null);
       if (slot) {
         const remaining = Math.max(0, slot.remaining - 1);
@@ -253,6 +254,7 @@ export default function BoardPage() {
         <RevealModal
           card={revealed.card}
           contactValue={revealed.contactValue}
+          contactType={revealed.contactType}
           onClose={() => {
             setRevealed(null);
             setReloadKey((k) => k + 1);

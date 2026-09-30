@@ -1,4 +1,5 @@
 import type { PostitColor } from "./constants";
+import type { ContactType } from "./validation/contact";
 
 export type Gender = "M" | "F";
 export type BoardMode = "opposite" | "selectable";
@@ -19,6 +20,7 @@ export interface Card {
   user_id: string;
   one_liner: string;
   instagram_id: string;
+  contact_type: ContactType;
   color: PostitColor;
   hidden_by_user: boolean;
   hidden_by_admin: boolean;
@@ -38,6 +40,7 @@ export interface MyCard {
   id: string;
   one_liner: string;
   instagram_id: string;
+  contact_type: ContactType;
   color: PostitColor;
   hidden_by_user: boolean;
   hidden_by_admin: boolean;
@@ -58,6 +61,7 @@ export interface MyMatch {
   one_liner: string;
   color: PostitColor;
   instagram_id: string;
+  contact_type: ContactType;
   bonus: boolean;
   selection_number: number;
   created_at: string;

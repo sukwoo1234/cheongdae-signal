@@ -12,6 +12,22 @@ export function InstagramIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function KakaoTalkIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M4 11.1c0-4 3.58-7.1 8-7.1s8 3.1 8 7.1-3.58 7.1-8 7.1c-.86 0-1.7-.12-2.47-.34L5.9 20l.9-3.17C5.08 15.53 4 13.48 4 11.1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function PhoneIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M7.1 3.8 4.7 5.6c-.62.47-.9 1.27-.68 2.02 1.75 6.05 6.32 10.62 12.37 12.37.75.22 1.55-.06 2.02-.68l1.8-2.4a1.45 1.45 0 0 0-.18-1.95l-2.55-2.31a1.45 1.45 0 0 0-1.87-.06l-1.56 1.22a12.16 12.16 0 0 1-3.86-3.86l1.22-1.56a1.45 1.45 0 0 0-.06-1.87L9.05 3.98A1.45 1.45 0 0 0 7.1 3.8Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function PaletteIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>

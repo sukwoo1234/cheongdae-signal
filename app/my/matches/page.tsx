@@ -7,7 +7,7 @@ import { CampusShell } from "@/components/CampusShell";
 import { PetalCard } from "@/components/PetalCard";
 import { SignalLoading } from "@/components/SignalLoading";
 import type { PostitColor } from "@/lib/constants";
-import { contactKind, formatContactValue } from "@/lib/validation/contact";
+import { contactTypeLabel, formatContactValue, type ContactType } from "@/lib/validation/contact";
 
 interface MatchRow {
   match_id: string;
@@ -15,6 +15,7 @@ interface MatchRow {
   one_liner: string;
   color: PostitColor;
   instagram_id: string;
+  contact_type: ContactType;
   created_at: string;
 }
 
@@ -60,13 +61,12 @@ export default function MyMatchesPage() {
         )}
 
         {matches.map((m) => {
-          const kind = contactKind(m.instagram_id);
-          const formattedContact = formatContactValue(m.instagram_id);
+          const formattedContact = formatContactValue(m.instagram_id, m.contact_type);
           return (
           <div key={m.match_id} className="mb-4 flex items-center gap-4 rounded-[24px] border border-[#ffdbe6] bg-white/88 p-5 shadow-[0_16px_42px_rgba(57,85,121,.12)] backdrop-blur-xl">
             <PetalCard text={m.one_liner} color={m.color} size="sm" rotation={1} />
             <div className="flex-1">
-              <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8390a2]">{kind === "phone" ? "Phone" : "Instagram / KakaoTalk"}</div>
+              <div className="mb-1 text-[9px] font-bold tracking-[0.08em] text-[#8390a2]">{contactTypeLabel(m.contact_type)}</div>
               <div className="flex items-center gap-2">
                 <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">{formattedContact}</span>
                 <button

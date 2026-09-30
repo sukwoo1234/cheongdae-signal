@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SessionConfig } from "@/lib/types";
-import { formatContactValue } from "@/lib/validation/contact";
+import { contactTypeShortLabel, formatContactValue, type ContactType } from "@/lib/validation/contact";
 import { SignalBrand } from "@/components/SignalBrand";
 
 interface Stats {
@@ -18,6 +18,7 @@ interface CardRow {
   id: string;
   one_liner: string;
   instagram_id: string;
+  contact_type: ContactType;
   color: string;
   email: string;
   gender: string;
@@ -36,10 +37,49 @@ interface UserInfo {
   viewed_cards: Array<{
     match_id: string;
     one_liner: string;
+    target_email: string;
+    target_gender: string | null;
     bonus: boolean;
     selection_number: number;
     created_at: string;
   }>;
+}
+
+interface MatchParty {
+  id: string;
+  email: string;
+  gender: string | null;
+}
+
+interface SelectionRow {
+  id: string;
+  viewer: MatchParty;
+  target: MatchParty & { one_liner: string };
+  selection_number: number;
+  bonus: boolean;
+  created_at: string;
+  mutual: boolean;
+}
+
+interface MutualMember extends MatchParty {
+  one_liner: string;
+  selection_number: number;
+  bonus: boolean;
+  selected_at: string;
+}
+
+interface MutualPair {
+  pair_key: string;
+  first: MutualMember;
+  second: MutualMember;
+  matched_at: string;
+}
+
+interface MatchOverview {
+  selections: SelectionRow[];
+  mutual_pairs: MutualPair[];
+  total_selections: number;
+  mutual_count: number;
 }
 
 interface PermanentBan {
@@ -123,6 +163,17 @@ export default function AdminConsole() {
   const [permanentBans, setPermanentBans] = useState<PermanentBan[]>([]);
   const [banMessage, setBanMessage] = useState("");
   const [banBusy, setBanBusy] = useState(false);
+  const [matchOverview, setMatchOverview] = useState<MatchOverview>({ selections: [], mutual_pairs: [], total_selections: 0, mutual_count: 0 });
+  const [matchView, setMatchView] = useState<"all" | "mutual">("all");
+  const [matchSearch, setMatchSearch] = useState("");
+  const [loadingMatches, setLoadingMatches] = useState(false);
+
+  async function loadMatchOverview() {
+    setLoadingMatches(true);
+    const response = await fetch("/api/admin/matches", { cache: "no-store" });
+    if (response.ok) setMatchOverview((await response.json()) as MatchOverview);
+    setLoadingMatches(false);
+  }
 
   async function loadPermanentBans() {
     const response = await fetch("/api/admin/permanent-bans", { cache: "no-store" });
@@ -146,6 +197,7 @@ export default function AdminConsole() {
   useEffect(() => {
     void loadStats();
     void loadPermanentBans();
+    void loadMatchOverview();
     const timer = window.setInterval(() => void loadStats(false), 10_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -155,6 +207,19 @@ export default function AdminConsole() {
     const original = draftFromConfig(stats.config);
     return JSON.stringify(original) !== JSON.stringify(draft);
   }, [stats, draft]);
+
+  const normalizedMatchSearch = matchSearch.trim().toLowerCase();
+  const visibleSelections = useMemo(() => matchOverview.selections.filter((row) => {
+    if (!normalizedMatchSearch) return true;
+    return row.viewer.email.toLowerCase().includes(normalizedMatchSearch)
+      || row.target.email.toLowerCase().includes(normalizedMatchSearch)
+      || row.target.one_liner.toLowerCase().includes(normalizedMatchSearch);
+  }), [matchOverview.selections, normalizedMatchSearch]);
+  const visibleMutualPairs = useMemo(() => matchOverview.mutual_pairs.filter((pair) => {
+    if (!normalizedMatchSearch) return true;
+    return [pair.first.email, pair.second.email, pair.first.one_liner, pair.second.one_liner]
+      .some((value) => value.toLowerCase().includes(normalizedMatchSearch));
+  }), [matchOverview.mutual_pairs, normalizedMatchSearch]);
 
   async function saveConfig() {
     if (!draft) return;
@@ -372,6 +437,7 @@ export default function AdminConsole() {
       alert(`폐기가 완전히 끝나지 않았습니다.\n\n${summary}${left}\n\n오류:\n${(data.errors ?? ["(없음)"]).join("\n")}\n\n다시 실행하세요.`);
     }
     await loadStats(true);
+    await loadMatchOverview();
   }
 
   if (!stats || !draft) {
@@ -426,6 +492,96 @@ export default function AdminConsole() {
           <Metric label="참여 현황" value={`${stats.users.cumulative} / (${stats.users.completed} / ${stats.users.incomplete})`} meta="누적 / (완료 / 미완료)" accent="text-[#5dd6b9]" />
           <Metric label="누적 매칭" value={stats.matches} meta="선택 완료" accent="text-[#e8e8ec]" />
           <Metric label="보드 상태" value={phase.label} meta={stats.config.force_locked ? "관리자가 잠금" : "자동 제어"} accent={phase.tone} />
+        </section>
+
+        <section className="mb-5 overflow-hidden rounded-xl border border-white/[0.08] bg-[#111216]">
+          <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div>
+              <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#686872]">Connections</p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                <h3 className="text-[13px] font-semibold text-[#e8e8ec]">선택·맞매칭 현황</h3>
+                <p className="text-[9px] text-[#666670]">누가 누구를 선택했는지와 서로 선택한 조합을 확인합니다.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadMatchOverview()}
+              disabled={loadingMatches}
+              className="h-8 self-start rounded-md border border-white/[0.1] px-3 text-[9px] font-medium text-[#a4a4ad] disabled:opacity-40 sm:self-auto"
+            >
+              {loadingMatches ? "새로고침 중…" : "새로고침"}
+            </button>
+          </div>
+          <div className="space-y-3 p-4 sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/[0.07] bg-[#0c0d10] p-1">
+                <button
+                  type="button"
+                  onClick={() => setMatchView("all")}
+                  className={`rounded-md px-3 py-2 text-[10px] font-semibold ${matchView === "all" ? "bg-[#29243f] text-[#c5bdff]" : "text-[#777781]"}`}
+                >
+                  전체 선택 {matchOverview.total_selections}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatchView("mutual")}
+                  className={`rounded-md px-3 py-2 text-[10px] font-semibold ${matchView === "mutual" ? "bg-[#17352d] text-[#6ee0c2]" : "text-[#777781]"}`}
+                >
+                  맞매칭 {matchOverview.mutual_count}쌍
+                </button>
+              </div>
+              <input
+                value={matchSearch}
+                onChange={(event) => setMatchSearch(event.target.value)}
+                placeholder="이메일 또는 한 줄 소개 검색"
+                aria-label="선택 내역 검색"
+                className="h-9 min-w-0 rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-[10px] text-white outline-none placeholder:text-[#55555e] sm:w-72"
+              />
+            </div>
+
+            <div className="admin-scrollbar max-h-[430px] space-y-2 overflow-auto">
+              {matchView === "all" && visibleSelections.length === 0 && <EmptyState>선택 내역이 없습니다.</EmptyState>}
+              {matchView === "all" && visibleSelections.map((row) => (
+                <div key={row.id} className="rounded-lg border border-white/[0.07] bg-[#0c0d10] p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded px-1.5 py-0.5 text-[8px] font-semibold ${row.mutual ? "bg-[#17352d] text-[#6ee0c2]" : "bg-[#27272d] text-[#9a9aa4]"}`}>
+                      {row.mutual ? "맞매칭" : "단방향"}
+                    </span>
+                    <span className={`rounded px-1.5 py-0.5 text-[8px] font-semibold ${row.bonus ? "bg-[#2a2346] text-[#b8adff]" : "bg-[#1b293d] text-[#8fb9f5]"}`}>
+                      선택 {row.selection_number}{row.bonus ? " · 추가 기회" : ""}
+                    </span>
+                    <span className="ml-auto text-[8px] text-[#55555e]">{formatTime(row.created_at)}</span>
+                  </div>
+                  <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-[10px]">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[#e1e1e6]">{row.viewer.email}</p>
+                      <p className="text-[8px] text-[#666670]">선택한 사람 · {row.viewer.gender ?? "미설정"}</p>
+                    </div>
+                    <span className={`text-sm ${row.mutual ? "text-[#6ee0c2]" : "text-[#777781]"}`}>{row.mutual ? "↔" : "→"}</span>
+                    <div className="min-w-0 text-right">
+                      <p className="truncate font-medium text-[#e1e1e6]">{row.target.email}</p>
+                      <p className="truncate text-[8px] text-[#777781]">{row.target.one_liner}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {matchView === "mutual" && visibleMutualPairs.length === 0 && <EmptyState>아직 맞매칭된 조합이 없습니다.</EmptyState>}
+              {matchView === "mutual" && visibleMutualPairs.map((pair) => (
+                <div key={pair.pair_key} className="rounded-lg border border-[#285044] bg-[#0d1715] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="rounded bg-[#17352d] px-1.5 py-0.5 text-[8px] font-semibold text-[#6ee0c2]">맞매칭</span>
+                    <span className="text-[8px] text-[#55766d]">성사 {formatTime(pair.matched_at)}</span>
+                  </div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                    <MutualMemberView member={pair.first} />
+                    <span className="text-lg text-[#6ee0c2]">↔</span>
+                    <MutualMemberView member={pair.second} align="right" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,.75fr)]">
@@ -571,7 +727,7 @@ export default function AdminConsole() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium text-[#e1e1e6]">{card.one_liner}</p>
-                        <p className="mt-1 truncate text-[9px] text-[#666670]">{card.gender} · {card.email} · <span className="font-mono">{formatContactValue(card.instagram_id)}</span></p>
+                        <p className="mt-1 truncate text-[9px] text-[#666670]">{card.gender} · {card.email} · {contactTypeShortLabel(card.contact_type)} <span className="font-mono">{formatContactValue(card.instagram_id, card.contact_type)}</span></p>
                       </div>
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-medium ${card.hidden_by_admin ? "bg-[#30261a] text-[#d9a84f]" : "bg-[#183029] text-[#58c9ad]"}`}>{card.hidden_by_admin ? "숨김" : "공개"}</span>
                     </div>
@@ -608,7 +764,10 @@ export default function AdminConsole() {
                             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold ${card.bonus ? "bg-[#2a2346] text-[#b8adff]" : "bg-[#183029] text-[#58c9ad]"}`}>
                               선택 {card.selection_number}{card.bonus ? " · 관리자 추가" : ""}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-[10px] text-[#d4d4d9]">{card.one_liner}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[10px] text-[#d4d4d9]">{card.target_email}</span>
+                              <span className="block truncate text-[8px] text-[#666670]">{card.target_gender ?? "미설정"} · {card.one_liner}</span>
+                            </span>
                             <span className="shrink-0 text-[8px] text-[#55555e]">{formatTime(card.created_at)}</span>
                           </div>
                         ))}
@@ -648,6 +807,18 @@ export default function AdminConsole() {
         </section>
       </div>
     </main>
+  );
+}
+
+function MutualMemberView({ member, align = "left" }: { member: MutualMember; align?: "left" | "right" }) {
+  return (
+    <div className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
+      <p className="truncate text-[10px] font-medium text-white">{member.email}</p>
+      <p className="mt-0.5 truncate text-[9px] text-[#86a49c]">{member.one_liner}</p>
+      <p className="mt-1 text-[8px] text-[#55766d]">
+        {member.gender ?? "미설정"} · 선택 {member.selection_number}{member.bonus ? " · 추가 기회" : ""}
+      </p>
+    </div>
   );
 }
 

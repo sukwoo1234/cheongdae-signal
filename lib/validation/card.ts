@@ -1,4 +1,4 @@
-import { sanitizeContactValue, isValidContactValue } from "@/lib/validation/contact";
+import { isContactType, sanitizeContactValue, isValidContactValue, type ContactType } from "@/lib/validation/contact";
 import { containsProfanity } from "@/lib/validation/profanity";
 import { containsPhoneNumber } from "@/lib/validation/phone";
 import { ONELINER_MAX_LENGTH, POSTIT_COLORS, type PostitColor } from "@/lib/constants";
@@ -7,6 +7,7 @@ export type CardFieldError =
   | "INVALID_ONELINER"
   | "PROFANITY_DETECTED"
   | "PHONE_DETECTED"
+  | "INVALID_CONTACT_TYPE"
   | "INVALID_CONTACT"
   | "INVALID_COLOR";
 
@@ -26,10 +27,15 @@ export function validateOneLiner(raw: unknown): Result<string> {
   return { value };
 }
 
-export function validateContactValue(raw: unknown): Result<string> {
+export function validateContactType(raw: unknown): Result<ContactType> {
+  if (!isContactType(raw)) return { error: "INVALID_CONTACT_TYPE" };
+  return { value: raw };
+}
+
+export function validateContactValue(raw: unknown, type: ContactType): Result<string> {
   if (typeof raw !== "string") return { error: "INVALID_CONTACT" };
-  const value = sanitizeContactValue(raw);
-  if (!isValidContactValue(value)) return { error: "INVALID_CONTACT" };
+  const value = sanitizeContactValue(raw, type);
+  if (!isValidContactValue(value, type)) return { error: "INVALID_CONTACT" };
   return { value };
 }
 
