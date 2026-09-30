@@ -42,13 +42,16 @@ describe("admin match overview", () => {
         if (table === "cards") return cardQuery;
         return userQuery;
       }),
+      rpc: vi.fn().mockResolvedValue({ data: 5, error: null }),
     });
 
     const response = await GET();
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.total_selections).toBe(3);
+    expect(body.total_selections).toBe(5);
+    expect(body.visible_selections).toBe(3);
+    expect(body.unavailable_selections).toBe(2);
     expect(body.mutual_count).toBe(1);
     expect(body.selections.map((row: { id: string; mutual: boolean }) => [row.id, row.mutual])).toEqual([
       ["a-to-b", true],
