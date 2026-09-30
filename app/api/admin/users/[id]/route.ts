@@ -19,7 +19,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 
   const { data: m } = await admin
     .from("matches")
-    .select("id, bonus, selection_number, viewed_card_id, created_at, cards!inner(one_liner)")
+    .select("id, bonus, selection_number, viewed_card_id, created_at, cards!inner(one_liner, users!inner(email, gender))")
     .eq("viewer_user_id", u.id)
     .order("created_at", { ascending: true });
 
@@ -33,11 +33,13 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     bonus: boolean;
     selection_number: number;
     created_at: string;
-    cards: { one_liner: string };
+    cards: { one_liner: string; users: { email: string; gender: string | null } };
   };
   const viewedCards = ((m ?? []) as unknown as ViewedMatchRow[]).map((match) => ({
     match_id: match.id,
     one_liner: match.cards.one_liner,
+    target_email: match.cards.users.email,
+    target_gender: match.cards.users.gender,
     bonus: match.bonus,
     selection_number: match.selection_number,
     created_at: match.created_at,
