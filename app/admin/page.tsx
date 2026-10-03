@@ -79,6 +79,8 @@ interface MatchOverview {
   selections: SelectionRow[];
   mutual_pairs: MutualPair[];
   total_selections: number;
+  visible_selections: number;
+  unavailable_selections: number;
   mutual_count: number;
 }
 
@@ -163,7 +165,8 @@ export default function AdminConsole() {
   const [permanentBans, setPermanentBans] = useState<PermanentBan[]>([]);
   const [banMessage, setBanMessage] = useState("");
   const [banBusy, setBanBusy] = useState(false);
-  const [matchOverview, setMatchOverview] = useState<MatchOverview>({ selections: [], mutual_pairs: [], total_selections: 0, mutual_count: 0 });
+  const [matchOverview, setMatchOverview] = useState<MatchOverview>({ selections: [], mutual_pairs: [], total_selections: 0, visible_selections: 0, unavailable_selections: 0, mutual_count: 0 });
+  const [matchSectionOpen, setMatchSectionOpen] = useState(false);
   const [matchView, setMatchView] = useState<"all" | "mutual">("all");
   const [matchSearch, setMatchSearch] = useState("");
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -495,24 +498,29 @@ export default function AdminConsole() {
         </section>
 
         <section className="mb-5 overflow-hidden rounded-xl border border-white/[0.08] bg-[#111216]">
-          <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div>
+          <button
+            type="button"
+            aria-expanded={matchSectionOpen}
+            aria-controls="admin-match-overview"
+            onClick={() => setMatchSectionOpen((open) => !open)}
+            className={`flex w-full flex-col gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between sm:px-5 ${matchSectionOpen ? "border-b border-white/[0.07]" : ""}`}
+          >
+            <div className="min-w-0">
               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#686872]">Connections</p>
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <h3 className="text-[13px] font-semibold text-[#e8e8ec]">선택·맞매칭 현황</h3>
-                <p className="text-[9px] text-[#666670]">누가 누구를 선택했는지와 서로 선택한 조합을 확인합니다.</p>
+                <span className="rounded bg-[#29243f] px-1.5 py-0.5 text-[8px] font-semibold text-[#c5bdff]">누적 {matchOverview.total_selections}</span>
+                <span className="rounded bg-[#17352d] px-1.5 py-0.5 text-[8px] font-semibold text-[#6ee0c2]">맞매칭 {matchOverview.mutual_count}쌍</span>
+                <span className="text-[8px] text-[#666670]">상세 {matchOverview.visible_selections}건</span>
+                {matchOverview.unavailable_selections > 0 && (
+                  <span className="text-[8px] text-[#9a7563]">삭제로 확인 불가 {matchOverview.unavailable_selections}건</span>
+                )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => void loadMatchOverview()}
-              disabled={loadingMatches}
-              className="h-8 self-start rounded-md border border-white/[0.1] px-3 text-[9px] font-medium text-[#a4a4ad] disabled:opacity-40 sm:self-auto"
-            >
-              {loadingMatches ? "새로고침 중…" : "새로고침"}
-            </button>
-          </div>
-          <div className="space-y-3 p-4 sm:p-5">
+            <span className="shrink-0 text-[9px] font-semibold text-[#85858f]">{matchSectionOpen ? "접기 −" : "열기 +"}</span>
+          </button>
+          {matchSectionOpen && (
+          <div id="admin-match-overview" className="space-y-3 p-4 sm:p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/[0.07] bg-[#0c0d10] p-1">
                 <button
@@ -530,17 +538,27 @@ export default function AdminConsole() {
                   맞매칭 {matchOverview.mutual_count}쌍
                 </button>
               </div>
-              <input
-                value={matchSearch}
-                onChange={(event) => setMatchSearch(event.target.value)}
-                placeholder="이메일 또는 한 줄 소개 검색"
-                aria-label="선택 내역 검색"
-                className="h-9 min-w-0 rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-[10px] text-white outline-none placeholder:text-[#55555e] sm:w-72"
-              />
+              <div className="flex min-w-0 gap-2 sm:w-auto">
+                <input
+                  value={matchSearch}
+                  onChange={(event) => setMatchSearch(event.target.value)}
+                  placeholder="이메일 또는 한 줄 소개 검색"
+                  aria-label="선택 내역 검색"
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-[10px] text-white outline-none placeholder:text-[#55555e] sm:w-64"
+                />
+                <button
+                  type="button"
+                  onClick={() => void loadMatchOverview()}
+                  disabled={loadingMatches}
+                  className="h-9 shrink-0 rounded-lg border border-white/[0.1] px-3 text-[9px] font-medium text-[#a4a4ad] disabled:opacity-40"
+                >
+                  {loadingMatches ? "갱신 중…" : "새로고침"}
+                </button>
+              </div>
             </div>
 
             <div className="admin-scrollbar max-h-[430px] space-y-2 overflow-auto">
-              {matchView === "all" && visibleSelections.length === 0 && <EmptyState>선택 내역이 없습니다.</EmptyState>}
+              {matchView === "all" && visibleSelections.length === 0 && (normalizedMatchSearch || matchOverview.unavailable_selections === 0) && <EmptyState>선택 내역이 없습니다.</EmptyState>}
               {matchView === "all" && visibleSelections.map((row) => (
                 <div key={row.id} className="rounded-lg border border-white/[0.07] bg-[#0c0d10] p-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -565,6 +583,11 @@ export default function AdminConsole() {
                   </div>
                 </div>
               ))}
+              {matchView === "all" && !normalizedMatchSearch && matchOverview.unavailable_selections > 0 && (
+                <div className="rounded-lg border border-[#46372f] bg-[#17120f] px-3 py-2.5 text-[9px] leading-4 text-[#a88774]">
+                  탈퇴 또는 카드 삭제로 상세정보를 보관하지 않는 선택 {matchOverview.unavailable_selections}건이 누적 수치에 포함되어 있습니다.
+                </div>
+              )}
 
               {matchView === "mutual" && visibleMutualPairs.length === 0 && <EmptyState>아직 맞매칭된 조합이 없습니다.</EmptyState>}
               {matchView === "mutual" && visibleMutualPairs.map((pair) => (
@@ -582,6 +605,7 @@ export default function AdminConsole() {
               ))}
             </div>
           </div>
+          )}
         </section>
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,.75fr)]">

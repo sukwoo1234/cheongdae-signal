@@ -19,23 +19,36 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const admin = createAdminClient();
-  const [{ data: matches, error: matchError }, { data: cards, error: cardError }] = await Promise.all([
+  const [
+    { data: matches, error: matchError },
+    { data: cards, error: cardError },
+    { data: cumulativeMatches, error: cumulativeError },
+  ] = await Promise.all([
     admin
       .from("matches")
       .select("id, viewer_user_id, viewed_card_id, bonus, selection_number, created_at")
       .order("created_at", { ascending: false }),
     admin.from("cards").select("id, user_id, one_liner"),
+    admin.rpc("admin_event_match_count"),
   ]);
 
-  if (matchError || cardError) {
+  if (matchError || cardError || cumulativeError) {
     return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
 
   const matchRows = (matches ?? []) as MatchRow[];
   const cardRows = (cards ?? []) as CardRow[];
   if (matchRows.length === 0) {
+    const totalSelections = Math.max(Number(cumulativeMatches ?? 0), 0);
     return NextResponse.json(
-      { selections: [], mutual_pairs: [], total_selections: 0, mutual_count: 0 },
+      {
+        selections: [],
+        mutual_pairs: [],
+        total_selections: totalSelections,
+        visible_selections: 0,
+        unavailable_selections: totalSelections,
+        mutual_count: 0,
+      },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -127,11 +140,14 @@ export async function GET() {
 
   mutualPairs.sort((a, b) => new Date(b.matched_at).getTime() - new Date(a.matched_at).getTime());
 
+  const totalSelections = Math.max(Number(cumulativeMatches ?? 0), selections.length);
   return NextResponse.json(
     {
       selections,
       mutual_pairs: mutualPairs,
-      total_selections: selections.length,
+      total_selections: totalSelections,
+      visible_selections: selections.length,
+      unavailable_selections: Math.max(totalSelections - selections.length, 0),
       mutual_count: mutualPairs.length,
     },
     { headers: { "Cache-Control": "no-store" } },
