@@ -8,6 +8,21 @@
 -- 라우트가 retention_accepted_at/last_active_at을 기준으로 처리한다.
 -- =============================================================================
 
+-- 이 전환은 기존 회차를 예전 폐기 방식으로 완전히 비운 직후에만 수행한다.
+-- 데이터가 남아 있으면 어떤 스키마 변경도 시작하기 전에 실패시킨다.
+do $$
+begin
+  if exists(select 1 from public.users)
+     or exists(select 1 from public.cards)
+     or exists(select 1 from public.matches)
+     or exists(select 1 from public.banned_emails)
+     or exists(select 1 from public.magic_link_throttle)
+     or exists(select 1 from private.event_participants) then
+    raise exception '0024_REQUIRES_EMPTY_EVENT_DATA';
+  end if;
+end;
+$$;
+
 alter table public.users
   add column if not exists last_active_at timestamptz not null default now(),
   add column if not exists retention_accepted_at timestamptz;

@@ -8,55 +8,64 @@ const migration = readFileSync(
   "utf8",
 );
 
+async function createLegacyDatabase() {
+  const db = new PGlite();
+  await db.exec(`
+    create role anon;
+    create role authenticated;
+    create role service_role;
+    create schema auth;
+    create schema private;
+    create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz);
+    create table public.users(
+      id uuid primary key references auth.users(id) on delete cascade,
+      email text not null unique,
+      gender text,
+      terms_accepted_at timestamptz,
+      privacy_accepted_at timestamptz,
+      banned boolean not null default false,
+      banned_reason text,
+      created_at timestamptz not null default now()
+    );
+    create table public.cards(id uuid primary key, user_id uuid references public.users(id));
+    create table public.matches(id uuid primary key, viewer_user_id uuid, viewed_card_id uuid);
+    create table public.banned_emails(email text primary key);
+    create table public.magic_link_throttle(key_hash text primary key);
+    create table public.session_config(
+      id int primary key,
+      event_id uuid not null,
+      purging boolean not null default false,
+      force_locked boolean not null default false,
+      max_views_per_card int,
+      board_mode text not null default 'opposite',
+      base_selection_allowance int not null default 1
+    );
+    create table private.event_participants(
+      event_id uuid not null,
+      subject_key text not null,
+      current_user_id uuid,
+      allowance int not null default 1,
+      used int not null default 0,
+      received_reveals int not null default 0,
+      banned boolean not null default false,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      primary key(event_id, subject_key)
+    );
+    create function private.app_actor_active() returns boolean language sql as $$ select true $$;
+
+    insert into public.session_config(id, event_id)
+    values (1, '10000000-0000-4000-8000-000000000001');
+  `);
+  return db;
+}
+
 describe("persistent participant accounts", () => {
   it("purges event data, retains opted-in accounts, and lets them join the next event", async () => {
-    const db = new PGlite();
-    await db.exec(`
-      create role anon;
-      create role authenticated;
-      create role service_role;
-      create schema auth;
-      create schema private;
-      create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz);
-      create table public.users(
-        id uuid primary key references auth.users(id) on delete cascade,
-        email text not null unique,
-        gender text,
-        terms_accepted_at timestamptz,
-        privacy_accepted_at timestamptz,
-        banned boolean not null default false,
-        banned_reason text,
-        created_at timestamptz not null default now()
-      );
-      create table public.cards(id uuid primary key, user_id uuid references public.users(id));
-      create table public.matches(id uuid primary key, viewer_user_id uuid, viewed_card_id uuid);
-      create table public.banned_emails(email text primary key);
-      create table public.magic_link_throttle(key_hash text primary key);
-      create table public.session_config(
-        id int primary key,
-        event_id uuid not null,
-        purging boolean not null default false,
-        force_locked boolean not null default false,
-        max_views_per_card int,
-        board_mode text not null default 'opposite',
-        base_selection_allowance int not null default 1
-      );
-      create table private.event_participants(
-        event_id uuid not null,
-        subject_key text not null,
-        current_user_id uuid,
-        allowance int not null default 1,
-        used int not null default 0,
-        received_reveals int not null default 0,
-        banned boolean not null default false,
-        created_at timestamptz not null default now(),
-        updated_at timestamptz not null default now(),
-        primary key(event_id, subject_key)
-      );
-      create function private.app_actor_active() returns boolean language sql as $$ select true $$;
+    const db = await createLegacyDatabase();
 
-      insert into public.session_config(id, event_id)
-      values (1, '10000000-0000-4000-8000-000000000001');
+    await db.exec(migration);
+    await db.exec(`
       insert into auth.users(id, email, email_confirmed_at)
       values ('20000000-0000-4000-8000-000000000001', 'student@cju.ac.kr', now());
       insert into public.users(id, email, gender, banned, banned_reason)
@@ -69,10 +78,6 @@ describe("persistent participant accounts", () => {
       insert into public.magic_link_throttle(key_hash) values ('hash');
       insert into private.event_participants(event_id, subject_key, current_user_id)
       values ('10000000-0000-4000-8000-000000000001', repeat('a', 64), '20000000-0000-4000-8000-000000000001');
-    `);
-
-    await db.exec(migration);
-    await db.exec(`
       update public.users set retention_accepted_at = now();
       update public.session_config set purging = true, force_locked = true where id = 1;
       select public.purge_current_event_data();
@@ -118,4 +123,27 @@ describe("persistent participant accounts", () => {
 
     await db.close();
   }, 20_000);
+
+  it("refuses to migrate while event data still exists", async () => {
+    const db = await createLegacyDatabase();
+    await db.exec(`
+      insert into auth.users(id, email, email_confirmed_at)
+      values ('20000000-0000-4000-8000-000000000001', 'student@cju.ac.kr', now());
+      insert into public.users(id, email)
+      values ('20000000-0000-4000-8000-000000000001', 'student@cju.ac.kr');
+    `);
+
+    await expect(db.exec(migration)).rejects.toThrow("0024_REQUIRES_EMPTY_EVENT_DATA");
+
+    const columns = await db.query<{ column_name: string }>(`
+      select column_name
+        from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'users'
+         and column_name = 'retention_accepted_at'
+    `);
+    expect(columns.rows).toHaveLength(0);
+
+    await db.close();
+  });
 });
