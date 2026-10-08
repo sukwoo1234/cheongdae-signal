@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PetalCard } from "@/components/PetalCard";
 import { ColorPicker } from "@/components/ColorPicker";
@@ -10,58 +11,83 @@ import { CampusShell } from "@/components/CampusShell";
 import { GraduationCapBadge } from "@/components/GraduationCapBadge";
 import { PaletteIcon } from "@/components/FieldIcons";
 import { ContactMethodTabs } from "@/components/ContactMethodTabs";
-import { SeasonBoundary } from "@/components/SeasonBoundary";
+import { seasonAudienceLabel, seasonEndLabel } from "@/lib/season-consent";
+import type { SeasonState } from "@/lib/types";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
 import type { ContactType } from "@/lib/validation/contact";
 
 export default function NewCard() {
-  return <SeasonBoundary><NewCardContent /></SeasonBoundary>;
-}
-
-function NewCardContent() {
   const [oneLiner, setOneLiner] = useState("");
   const [contactValue, setContactValue] = useState("");
   const [contactType, setContactType] = useState<ContactType>("instagram");
   const [color, setColor] = useState<PostitColor>(POSTIT_COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [season, setSeason] = useState<SeasonState | null>(null);
   const router = useRouter();
 
+  const loadSeason = useCallback(async () => {
+    setSeason(null);
+    try {
+      const res = await fetch("/api/season", { cache: "no-store" });
+      if (res.status === 401 || res.status === 403) { router.replace("/"); return; }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSeason(data.season);
+    } catch { setError("운영 안내를 불러오지 못했어요. 새로고침 후 다시 시도해주세요."); }
+  }, [router]);
+  useEffect(() => { void loadSeason(); }, [loadSeason]);
+  const ended = !!season && new Date(season.ends_at).getTime() <= Date.now();
+
   const canSubmit = useMemo(
-    () => oneLiner.trim().length > 0 && contactValue.trim().length > 0 && !submitting,
-    [oneLiner, contactValue, submitting]
+    () => oneLiner.trim().length > 0 && contactValue.trim().length > 0 && !submitting && !!season && !ended,
+    [oneLiner, contactValue, submitting, season, ended]
   );
 
   async function submit() {
+    if (!canSubmit || !season) return;
     setSubmitting(true);
     setError(null);
-    const res = await fetch("/api/cards", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({
-        one_liner: oneLiner.trim(),
-        instagram_id: contactValue.trim(),
-        contact_type: contactType,
-        color,
-      }),
-    });
-    if (res.ok) {
-      router.push("/board");
-    } else {
-      const data = await res.json().catch(() => ({}));
-      const msgs: Record<string, string> = {
-        INVALID_ONELINER: "한 줄 소개는 1~20자",
-        PROFANITY_DETECTED: "비속어가 포함되어 있어요",
-        PHONE_DETECTED: "전화번호는 적을 수 없어요",
-        INVALID_CONTACT: "인스타그램 ID, 카톡 ID 또는 휴대전화 번호 형식을 확인해주세요",
-        INVALID_CONTACT_TYPE: "연락 방법을 다시 선택해주세요",
-        INVALID_COLOR: "색상이 잘못됐어요",
-        ALREADY_HAS_CARD: "이미 카드를 만들었어요",
-      };
-      setError(msgs[data.error] || "오류가 발생했어요");
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          one_liner: oneLiner.trim(),
+          instagram_id: contactValue.trim(),
+          contact_type: contactType,
+          color,
+          ...(season.continuous_mode ? { season_consent: {
+            accepted: true, event_id: season.event_id, ends_at: season.ends_at, board_mode: season.board_mode,
+          } } : {}),
+        }),
+      });
+      if (res.ok) {
+        router.push("/board");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const msgs: Record<string, string> = {
+          INVALID_ONELINER: "한 줄 소개는 1~20자",
+          PROFANITY_DETECTED: "비속어가 포함되어 있어요",
+          PHONE_DETECTED: "전화번호는 적을 수 없어요",
+          INVALID_CONTACT: "인스타그램 ID, 카톡 ID 또는 휴대전화 번호 형식을 확인해주세요",
+          INVALID_CONTACT_TYPE: "연락 방법을 다시 선택해주세요",
+          INVALID_COLOR: "색상이 잘못됐어요",
+          ALREADY_HAS_CARD: "이미 카드를 만들었어요",
+          SEASON_CONSENT_REQUIRED: "운영 안내를 확인한 뒤 다시 등록해주세요",
+          SEASON_CHANGED: "운영 안내가 갱신됐어요. 내용을 확인한 뒤 다시 등록해주세요",
+          SEASON_UNAVAILABLE: "운영 정보를 확인하지 못했어요. 잠시 후 다시 시도해주세요",
+          SESSION_ENDED: "이번 운영이 종료됐어요",
+        };
+        if (data.error === "SEASON_CHANGED") await loadSeason();
+        setError(msgs[data.error] || "오류가 발생했어요");
+      }
+    } catch {
+      setError("카드를 등록하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.");
+    } finally {
       setSubmitting(false);
     }
   }
@@ -107,8 +133,16 @@ function NewCardContent() {
           </div>
         </div>
 
+        {season?.continuous_mode && (
+          <div className="mt-6 rounded-xl bg-[#f3f7fd] p-4 text-xs leading-5 text-[#526783]">
+            <p>카드를 <strong>{seasonEndLabel(season.ends_at)} (한국시간)</strong>까지 유지하고, <strong>{seasonAudienceLabel(season.board_mode)} 공개</strong>합니다.</p>
+            <p className="mt-2">연락처는 내 카드를 선택한 참가자에게만 공개되며, 카드·연락처·선택 기록은 운영 종료 후 7일 이내 폐기합니다.</p>
+            <p className="mt-2">아래 버튼을 누르면 이 안내에 동의하고 카드를 등록합니다. <Link className="underline" href="/terms">이용약관</Link> · <Link className="underline" href="/privacy">개인정보 처리방침</Link></p>
+          </div>
+        )}
+        {ended && <p className="mt-4 text-center text-sm text-[#526783]">이번 운영이 종료됐어요.</p>}
         <Button onClick={submit} disabled={!canSubmit} className="mt-6 h-14 w-full bg-gradient-to-r from-[#3e86ea] via-[#668fe9] to-[#aa74e9] text-base shadow-[0_12px_28px_rgba(64,126,212,.24)]">
-          {submitting ? "카드 올리는 중…" : "보드에 올리기  →"}
+          {submitting ? "카드 올리는 중…" : season?.continuous_mode ? "동의하고 보드에 올리기  →" : "보드에 올리기  →"}
         </Button>
         {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
       </section>

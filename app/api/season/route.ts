@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveUser, denialResponse } from "@/lib/auth";
 import { requireAjaxRequest } from "@/lib/csrf";
+import { parseSeasonConsent } from "@/lib/season-consent";
 
 export async function GET() {
   const { supabase, user, denial } = await getActiveUser();
@@ -18,10 +19,8 @@ export async function POST(req: Request) {
   const { supabase, user, denial } = await getActiveUser();
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
-  const body = await req.json().catch(() => null);
-  if (!body || body.accepted !== true || typeof body.event_id !== "string"
-      || typeof body.ends_at !== "string" || !Number.isFinite(Date.parse(body.ends_at))
-      || !["opposite", "selectable"].includes(body.board_mode)) {
+  const body = parseSeasonConsent(await req.json().catch(() => null));
+  if (!body) {
     return NextResponse.json({ error: "INVALID_CONSENT" }, { status: 400 });
   }
   // Bind consent to exactly the period and audience the participant was shown.

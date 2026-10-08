@@ -20,7 +20,7 @@ describe("season consent API", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect((await res.json()).season.accepted).toBe(false);
   });
-  it("does not submit consent without the checkbox or ajax header", async () => {
+  it("requires an explicit acceptance action and ajax header", async () => {
     expect((await POST(request({...body,accepted:false}))).status).toBe(400);
     expect((await POST(request(body,false))).status).toBe(403);
     expect((await POST(request(null))).status).toBe(400);

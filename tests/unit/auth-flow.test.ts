@@ -64,7 +64,7 @@ describe("finishSignIn runtime boundary", () => {
     };
     mocks.createAdminClient.mockReturnValue(admin);
 
-    return { signOut, permanentBans, admin };
+    return { signOut, permanentBans, admin, users };
   }
 
   beforeEach(() => {
@@ -120,8 +120,7 @@ describe("finishSignIn runtime boundary", () => {
   });
 
   it("sends an account retained from a previous event to explicit rejoin", async () => {
-    const { signOut, admin } = useValidSession();
-    const users = admin.from("users");
+    const { signOut, admin, users } = useValidSession();
     users.maybeSingle.mockResolvedValue({ data: { gender: "M", banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null });
     admin.rpc.mockResolvedValue({ data: [], error: null });
 

@@ -119,6 +119,9 @@ describe("continuous season conversion", () => {
 
   it("requires explicit consent and shows both tabs only for consented participants", async () => {
     await setup(); await activate();
+    const [legacyState] = await query("select * from public.my_season_state()");
+    expect(legacyState.accepted).toBe(false);
+    expect(new Date(legacyState.participation_ends_at).getTime()).toBeLessThan(new Date(legacyState.ends_at).getTime());
     await db.exec("update public.session_config set force_locked=false");
     expect(await query("select public.board_is_open() open")).toEqual([{open:true}]);
     await expect(db.exec("select * from public.board_cards('M')")).rejects.toThrow("SEASON_CONSENT_REQUIRED");
@@ -184,6 +187,9 @@ describe("continuous season conversion", () => {
         values('${card(7)}','${uid(7)}','new','student7','kakao','pink');`);
     expect((await query("select * from public.board_cards('F')")).map(r=>r.id)).not.toContain(card(7));
     await actor(7);
+    const [newState] = await query("select * from public.my_season_state()");
+    expect(newState.accepted).toBe(false);
+    expect(new Date(newState.participation_ends_at).getTime()).toBe(new Date(newState.ends_at).getTime());
     expect((await query("select * from public.my_slot_state()"))[0]).toMatchObject({used:0,remaining:2,base_remaining:2});
     await accept(); await actor(1);
     expect((await query("select * from public.board_cards('F')")).map(r=>r.id)).toContain(card(7));
