@@ -19,10 +19,13 @@ interface MatchRow {
   created_at: string;
 }
 
+const INITIAL_VISIBLE_MATCHES = 5;
+
 export default function MyMatchesPage() {
   const router = useRouter();
   const [matches, setMatches] = useState<MatchRow[] | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     fetch("/api/matches/me")
@@ -40,6 +43,10 @@ export default function MyMatchesPage() {
   }, [router]);
 
   if (!matches) return <SignalLoading message="저장된 매칭을 확인하고 있어요." />;
+  // The API already returns newest selections first. Only collapse the display,
+  // keeping the total and saved contacts unchanged.
+  const visibleMatches = expanded ? matches : matches.slice(0, INITIAL_VISIBLE_MATCHES);
+  const additionalCount = Math.max(0, matches.length - INITIAL_VISIBLE_MATCHES);
 
   return (
     <CampusShell className="min-h-[1080px] sm:min-h-screen">
@@ -60,33 +67,46 @@ export default function MyMatchesPage() {
           <div className="rounded-[24px] border border-dashed border-[#ccd6e2] bg-white/75 px-6 py-16 text-center backdrop-blur"><p className="text-sm font-semibold text-[#526176]">아직 선택한 카드가 없어요.</p><p className="mt-1 text-xs text-[#8390a2]">보드에서 마음 가는 카드 한 장을 골라보세요.</p></div>
         )}
 
-        {matches.map((m) => {
-          const formattedContact = formatContactValue(m.instagram_id, m.contact_type);
-          return (
-          <div key={m.match_id} className="mb-4 flex items-center gap-4 rounded-[24px] border border-[#ffdbe6] bg-white/88 p-5 shadow-[0_16px_42px_rgba(57,85,121,.12)] backdrop-blur-xl">
-            <PetalCard text={m.one_liner} color={m.color} size="sm" rotation={1} />
-            <div className="flex-1">
-              <div className="mb-1 text-[9px] font-bold tracking-[0.08em] text-[#8390a2]">{contactTypeLabel(m.contact_type)}</div>
-              <div className="flex items-center gap-2">
-                <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">{formattedContact}</span>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(formattedContact);
-                    setCopiedId(m.match_id);
-                    setTimeout(() => setCopiedId(null), 2000);
-                  }}
-                  className="shrink-0 rounded-lg bg-[#071b33] px-2.5 py-1.5 text-[10px] font-semibold text-white"
-                >
-                  {copiedId === m.match_id ? "복사됨" : "복사"}
-                </button>
+        <div id="my-matches-list">
+          {visibleMatches.map((m) => {
+            const formattedContact = formatContactValue(m.instagram_id, m.contact_type);
+            return (
+              <div key={m.match_id} className="mb-4 flex items-center gap-4 rounded-[24px] border border-[#ffdbe6] bg-white/88 p-5 shadow-[0_16px_42px_rgba(57,85,121,.12)] backdrop-blur-xl">
+                <PetalCard text={m.one_liner} color={m.color} size="sm" rotation={1} />
+                <div className="flex-1">
+                  <div className="mb-1 text-[9px] font-bold tracking-[0.08em] text-[#8390a2]">{contactTypeLabel(m.contact_type)}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 break-all font-mono text-sm font-bold text-[#071b33]">{formattedContact}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(formattedContact);
+                        setCopiedId(m.match_id);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                      className="shrink-0 rounded-lg bg-[#071b33] px-2.5 py-1.5 text-[10px] font-semibold text-white"
+                    >
+                      {copiedId === m.match_id ? "복사됨" : "복사"}
+                    </button>
+                  </div>
+                  <div className="mt-1.5 text-[10px] text-[#9aa6b5]">
+                    {new Date(m.created_at).toLocaleString("ko-KR")}
+                  </div>
+                </div>
               </div>
-              <div className="mt-1.5 text-[10px] text-[#9aa6b5]">
-                {new Date(m.created_at).toLocaleString("ko-KR")}
-              </div>
-            </div>
-          </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        {additionalCount > 0 && (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="my-matches-list"
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-2 min-h-12 w-full rounded-2xl border border-[#dce4ee] bg-white/90 px-5 py-3 text-sm font-bold text-[#526176] transition hover:bg-[#f0f5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#718be4] focus-visible:ring-offset-2"
+          >
+            {expanded ? "접기 · 최신 5개만 보기" : `더보기 (${additionalCount}개)`}
+          </button>
+        )}
       </div>
     </CampusShell>
   );
