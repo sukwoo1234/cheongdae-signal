@@ -23,11 +23,13 @@ export default function MyCardPage() {
   const [color, setColor] = useState<PostitColor>("yellow");
   const [saving, setSaving] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     fetch("/api/cards/me")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => {
         setCard(d.card);
         if (d.card) {
@@ -37,7 +39,9 @@ export default function MyCardPage() {
           setColor(d.card.color);
           setHidden(d.card.hidden_by_user);
         }
-      });
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoaded(true));
   }, []);
 
   async function save() {
@@ -76,7 +80,17 @@ export default function MyCardPage() {
     router.push("/");
   }
 
-  if (!card) return <SignalLoading message="내 카드를 준비하고 있어요." />;
+  if (!loaded) return <SignalLoading message="내 카드를 준비하고 있어요." />;
+  if (!card) return (
+    <CampusShell>
+      <section className="mx-auto mt-8 max-w-md rounded-3xl bg-white p-6 text-center text-sm leading-7 text-[#526783]">
+        <p>{loadError ? "카드를 불러오지 못했어요. 다시 접속해주세요." : "아직 등록한 카드가 없어요."}</p>
+        <Link href="/board" className="block underline">운영 안내·보드로</Link>
+        {!loadError && <Link href="/card/new" className="block underline">카드 만들기</Link>}
+        <button onClick={deleteAccount} className="mt-4 text-red-600 underline">계정·참여 정보 삭제</button>
+      </section>
+    </CampusShell>
+  );
 
   return (
     <CampusShell className="min-h-[1250px] sm:min-h-screen">

@@ -116,6 +116,9 @@ export async function PATCH(req: Request) {
 
   const { error } = await admin.from("session_config").update(updates).eq("id", 1);
   if (error) {
+    if (error.message.includes("SEASON_RULES_LOCKED")) {
+      return NextResponse.json({ error: "SEASON_RULES_LOCKED" }, { status: 409 });
+    }
     if (error.message.includes("EVENT_RULES_LOCKED")) {
       return NextResponse.json({ error: "EVENT_RULES_LOCKED" }, { status: 409 });
     }

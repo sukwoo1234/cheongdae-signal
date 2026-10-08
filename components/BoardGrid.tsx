@@ -21,20 +21,30 @@ interface Props {
 export function BoardGrid({ onCardClick, reloadKey, targetGender }: Props) {
   const [cards, setCards] = useState<BoardCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
+    setError(false);
     const query = targetGender ? `?gender=${targetGender}` : "";
-    fetch(`/api/board${query}`)
-      .then((r) => r.json())
+    fetch(`/api/board${query}`, { signal: controller.signal })
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => {
+        if (controller.signal.aborted) return;
         setCards(d.cards ?? []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setLoading(false);
+        setError(true);
+      });
+    return () => controller.abort();
   }, [reloadKey, targetGender]);
 
   if (loading) return <p className="py-20 text-center text-sm text-[#8390a2]">카드를 불러오는 중…</p>;
+  if (error) return <p role="alert" className="py-20 text-center text-sm text-[#8390a2]">카드를 불러오지 못했어요. 새로고침해 다시 확인해주세요.</p>;
   if (cards.length === 0) {
     return <p className="py-20 text-center text-sm text-[#8390a2]">아직 공개된 카드가 없어요.</p>;
   }

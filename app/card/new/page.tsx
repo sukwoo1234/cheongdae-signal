@@ -10,10 +10,15 @@ import { CampusShell } from "@/components/CampusShell";
 import { GraduationCapBadge } from "@/components/GraduationCapBadge";
 import { PaletteIcon } from "@/components/FieldIcons";
 import { ContactMethodTabs } from "@/components/ContactMethodTabs";
+import { SeasonBoundary } from "@/components/SeasonBoundary";
 import { ONELINER_MAX_LENGTH, PostitColor, POSTIT_COLORS } from "@/lib/constants";
 import type { ContactType } from "@/lib/validation/contact";
 
 export default function NewCard() {
+  return <SeasonBoundary><NewCardContent /></SeasonBoundary>;
+}
+
+function NewCardContent() {
   const [oneLiner, setOneLiner] = useState("");
   const [contactValue, setContactValue] = useState("");
   const [contactType, setContactType] = useState<ContactType>("instagram");

@@ -80,12 +80,27 @@ export interface SessionConfig {
   max_views_per_card: number | null;
   board_mode: BoardMode;
   base_selection_allowance: 1 | 2;
+  continuous_mode?: boolean;
+  previous_ends_at?: string | null;
 }
 
 export interface SlotState {
   allowance: number;
   used: number;
   remaining: number;
+  base_remaining?: number;
+  bonus_remaining?: number;
+  next_refill_at?: string | null;
+}
+
+export interface SeasonState {
+  event_id: string;
+  continuous_mode: boolean;
+  ends_at: string;
+  participation_ends_at: string | null;
+  accepted: boolean;
+  board_mode: BoardMode;
+  base_allowance: number;
 }
 
 export interface SessionState {

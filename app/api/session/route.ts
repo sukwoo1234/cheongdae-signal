@@ -30,7 +30,7 @@ export async function GET() {
   const endsAt = new Date(cfg.ends_at).getTime();
 
   const thresholdMet = male >= cfg.threshold_male && female >= cfg.threshold_female;
-  const inPregating = now < startsAt || !thresholdMet;
+  const inPregating = now < startsAt || (!cfg.continuous_mode && !thresholdMet);
   const inPostSession = now >= endsAt;
 
   return NextResponse.json({

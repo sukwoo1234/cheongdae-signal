@@ -31,6 +31,12 @@ export async function GET() {
   const cardCounts = (counts ?? { male: 0, female: 0 }) as { male: number; female: number };
   const users = participantCounts as { participants: number; users: number };
   const completed = completedCards ?? 0;
+  let seasonConsent = null;
+  if (cfg.continuous_mode) {
+    const { data, error } = await admin.rpc("admin_season_summary").single();
+    if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+    seasonConsent = data;
+  }
 
   return NextResponse.json({
     male: cardCounts.male ?? 0,
@@ -42,6 +48,7 @@ export async function GET() {
       incomplete: Math.max(users.participants - completed, 0),
     },
     retained_accounts: users.users,
+    season_consent: seasonConsent,
     board_open: boardOpen === true,
     config: cfg,
   });

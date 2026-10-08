@@ -11,6 +11,7 @@ import { SignalLoading } from "@/components/SignalLoading";
 import { SignalBrand } from "@/components/SignalBrand";
 import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
+import { SeasonBoundary } from "@/components/SeasonBoundary";
 import type { PostitColor } from "@/lib/constants";
 import type { Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
 import type { ContactType } from "@/lib/validation/contact";
@@ -23,6 +24,10 @@ interface BoardCard {
 }
 
 export default function BoardPage() {
+  return <SeasonBoundary><BoardContent /></SeasonBoundary>;
+}
+
+function BoardContent() {
   const [sessionState, setSessionState] = useState<SessionState | null>(null);
   const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [pending, setPending] = useState<BoardCard | null>(null);
@@ -106,6 +111,14 @@ export default function BoardPage() {
     if (sessionState?.in_postsession) router.replace("/end");
   }, [sessionState?.in_postsession, router]);
 
+  useEffect(() => {
+    if (!slot?.next_refill_at) return;
+    const delay = new Date(slot.next_refill_at).getTime() - Date.now();
+    if (delay < 0) { void loadAll(); return; }
+    const timer = setTimeout(() => void loadAll(), delay + 1000);
+    return () => clearTimeout(timer);
+  }, [slot?.next_refill_at, loadAll]);
+
   async function confirmReveal() {
     if (!pending) return;
     setRevealing(true);
@@ -124,7 +137,9 @@ export default function BoardPage() {
       setPending(null);
       if (slot) {
         const remaining = Math.max(0, slot.remaining - 1);
-        setSlot({ ...slot, used: slot.used + 1, remaining });
+        const baseRemaining = Math.max(0, (slot.base_remaining ?? 0) - 1);
+        const bonusRemaining = Math.max(0, (slot.bonus_remaining ?? 0) - ((slot.base_remaining ?? 0) > 0 ? 0 : 1));
+        setSlot({ ...slot, used: slot.used + 1, remaining, base_remaining: baseRemaining, bonus_remaining: bonusRemaining });
         setHasUsedSlot(remaining <= 0);
       } else {
         setHasUsedSlot(true);
@@ -139,6 +154,7 @@ export default function BoardPage() {
         CARD_FULL: "이 카드는 마감됐어요. 다른 카드를 골라주세요",
         NO_CARD: "먼저 내 카드를 등록해야 슬롯이 생겨요",
         BANNED: "이용이 제한된 계정이에요",
+        SEASON_CONSENT_REQUIRED: "운영 변경 안내에 동의한 뒤 이용해주세요. 새로고침하면 안내가 표시됩니다.",
       };
       setError(msgs[data.error] || "확인 실패");
     }
@@ -205,6 +221,14 @@ export default function BoardPage() {
       </header>
 
       <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-5 sm:py-7">
+        {sessionState.config.continuous_mode && (
+          <div className="mb-4 rounded-2xl border border-white bg-white/85 px-4 py-3 text-center text-xs leading-5 text-[#526783]">
+            <p><strong>매주 월요일 0시, 기본 선택권 2회 갱신</strong> · 두 보드 합산 · 미사용 기본 기회는 이월되지 않아요.</p>
+            <p>카드는 계속 유지돼요. 내 카드에서 수정·숨김·다시 공개할 수 있어요.</p>
+            {slot && <p>이번 주 기본 {slot.base_remaining ?? 0}회 · 관리자 추가 {slot.bonus_remaining ?? 0}회 남음</p>}
+            <p className="mt-1 text-[10px]">운영 종료: {new Date(sessionState.config.ends_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} (한국시간)</p>
+          </div>
+        )}
         {sessionState.config.board_mode === "selectable" && (
           <div className="mx-auto mb-3 flex w-fit rounded-2xl border border-white/90 bg-white/80 p-1 shadow-sm backdrop-blur">
             {(["M", "F"] as const).map((gender) => (
@@ -241,7 +265,7 @@ export default function BoardPage() {
           targetGender={sessionState.config.board_mode === "selectable" ? (targetGender ?? undefined) : undefined}
           onCardClick={(c) => {
             if (hasUsedSlot) {
-              setError("슬롯을 이미 사용했어요. '내 매칭'에서 확인하세요.");
+              setError(sessionState.config.continuous_mode ? "이번 주 선택 기회를 모두 사용했어요. 월요일 0시에 기본 2회가 갱신됩니다." : "슬롯을 이미 사용했어요. '내 매칭'에서 확인하세요.");
               return;
             }
             setPending(c);

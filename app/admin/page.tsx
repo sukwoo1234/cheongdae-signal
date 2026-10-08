@@ -11,6 +11,7 @@ interface Stats {
   matches: number;
   users: { cumulative: number; completed: number; incomplete: number };
   board_open: boolean;
+  season_consent?: { accepted: number; pending: number } | null;
   config: SessionConfig;
 }
 
@@ -266,6 +267,7 @@ export default function AdminConsole() {
         INVALID_BOARD_MODE: "보드 모드를 다시 선택해주세요.",
         INVALID_BASE_ALLOWANCE: "기본 선택 기회를 다시 선택해주세요.",
         EVENT_RULES_LOCKED: "행사가 시작되어 보드 모드와 기본 선택 기회는 변경할 수 없습니다.",
+        SEASON_RULES_LOCKED: "참가자가 동의한 운영 기간·보드 모드·기본 기회는 변경할 수 없습니다.",
       };
       setSaveState("error");
       setSaveMessage(messages[data.error ?? ""] ?? "저장하지 못했습니다. 다시 시도해주세요.");
@@ -463,7 +465,7 @@ export default function AdminConsole() {
         : !stats.board_open
           ? { label: "준비 중", tone: "text-[#e8b85b]", dot: "bg-[#e8b85b]" }
           : { label: "운영 중", tone: "text-[#5dd6b9]", dot: "bg-[#4fd1b2]" };
-  const eventRulesLocked = now >= starts;
+  const eventRulesLocked = !!stats.config.continuous_mode || now >= starts;
 
   return (
     <main className="min-h-screen bg-[#08090b] text-[#e8e8ec]">
@@ -490,12 +492,21 @@ export default function AdminConsole() {
         </div>
 
         <section className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
-          <Metric label="남자 카드" value={stats.male} meta={`목표 ${stats.config.threshold_male}장`} accent="text-[#77a7ff]" />
-          <Metric label="여자 카드" value={stats.female} meta={`목표 ${stats.config.threshold_female}장`} accent="text-[#f28db2]" />
+          <Metric label="남자 카드" value={stats.male} meta={stats.config.continuous_mode ? "동의 완료 · 공개 가능" : `목표 ${stats.config.threshold_male}장`} accent="text-[#77a7ff]" />
+          <Metric label="여자 카드" value={stats.female} meta={stats.config.continuous_mode ? "동의 완료 · 공개 가능" : `목표 ${stats.config.threshold_female}장`} accent="text-[#f28db2]" />
           <Metric label="참여 현황" value={`${stats.users.cumulative} / (${stats.users.completed} / ${stats.users.incomplete})`} meta="누적 / (완료 / 미완료)" accent="text-[#5dd6b9]" />
           <Metric label="누적 매칭" value={stats.matches} meta="선택 완료" accent="text-[#e8e8ec]" />
-          <Metric label="보드 상태" value={phase.label} meta={stats.config.force_locked ? "관리자가 잠금" : "자동 제어"} accent={phase.tone} />
+          <Metric label="보드 상태" value={phase.label} meta={stats.config.force_locked ? "관리자가 잠금" : stats.config.continuous_mode ? "인원 조건 없음" : "자동 제어"} accent={phase.tone} />
         </section>
+
+        {stats.config.continuous_mode && (
+          <div className="mb-5 rounded-xl border border-[#285044] bg-[#0d1715] p-4 text-xs leading-6 text-[#86b9a9]">
+            <strong>장기 운영 · 매주 월요일 0시(한국시간) 기본 선택권 2회 갱신</strong>
+            <p>남성·여성 보드 합산 / 미사용 기본 기회 미이월 / 관리자 추가 기회·누적 선택 이력 유지</p>
+            <p>최소 인원 조건을 사용하지 않습니다. 강제 잠금을 해제하면 운영 기간 내 바로 열립니다.</p>
+            <p>운영 변경 동의 {stats.season_consent?.accepted ?? 0}명 · 대기 {stats.season_consent?.pending ?? 0}명. 기존 카드는 보관되며, 동의 전에는 공개 가능 카드 수에서 제외됩니다.</p>
+          </div>
+        )}
 
         <section className="mb-5 overflow-hidden rounded-xl border border-white/[0.08] bg-[#111216]">
           <button
@@ -615,6 +626,7 @@ export default function AdminConsole() {
               <div className="grid gap-4 lg:grid-cols-2">
                 <DateField
                   label="시작 시각"
+                  disabled={!!stats.config.continuous_mode}
                   value={draft.startsAt}
                   onChange={(value) => { setDraft({ ...draft, startsAt: value }); setSaveState("idle"); }}
                   actions={[
@@ -624,6 +636,7 @@ export default function AdminConsole() {
                 />
                 <DateField
                   label="종료 시각"
+                  disabled={!!stats.config.continuous_mode}
                   value={draft.endsAt}
                   onChange={(value) => { setDraft({ ...draft, endsAt: value }); setSaveState("idle"); }}
                   actions={[
@@ -673,8 +686,8 @@ export default function AdminConsole() {
               <div className="border-t border-white/[0.07]" />
 
               <div className="grid gap-4 lg:grid-cols-3">
-                <Stepper label="남자 필요 인원" value={draft.thresholdMale} onChange={(value) => setDraft({ ...draft, thresholdMale: value })} />
-                <Stepper label="여자 필요 인원" value={draft.thresholdFemale} onChange={(value) => setDraft({ ...draft, thresholdFemale: value })} />
+                {!stats.config.continuous_mode && <Stepper label="남자 필요 인원" value={draft.thresholdMale} onChange={(value) => setDraft({ ...draft, thresholdMale: value })} />}
+                {!stats.config.continuous_mode && <Stepper label="여자 필요 인원" value={draft.thresholdFemale} onChange={(value) => setDraft({ ...draft, thresholdFemale: value })} />}
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium text-[#a4a4ad]">카드당 최대 열람</span>
                   <input
@@ -774,7 +787,7 @@ export default function AdminConsole() {
               {userInfo && (
                 <div className="mt-4 rounded-lg border border-white/[0.07] bg-[#0c0d10] p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{userInfo.email}</p><p className="mt-1 text-[9px] text-[#666670]">{userInfo.gender ?? "미설정"} · 선택 기회 {userInfo.remaining}회 남음 ({userInfo.used}/{userInfo.allowance} 사용)</p></div>
+                    <div className="min-w-0"><p className="truncate text-xs font-medium text-white">{userInfo.email}</p><p className="mt-1 text-[9px] text-[#666670]">{userInfo.gender ?? "미설정"} · 선택 기회 {userInfo.remaining}회 남음 ({stats.config.continuous_mode ? `시즌 누적 ${userInfo.used}회 사용` : `${userInfo.used}/${userInfo.allowance} 사용`})</p></div>
                     <span className={`rounded px-1.5 py-0.5 text-[8px] font-medium ${userInfo.banned ? "bg-[#35191f] text-[#ff7185]" : "bg-[#183029] text-[#58c9ad]"}`}>{userInfo.banned ? "차단됨" : "정상"}</span>
                   </div>
                   <div className="mt-3 rounded-md bg-white/[0.035] px-3 py-2.5">
@@ -868,13 +881,13 @@ function SectionHeader({ eyebrow, title, description, danger = false }: { eyebro
   );
 }
 
-function DateField({ label, value, onChange, actions }: { label: string; value: string; onChange: (value: string) => void; actions: Array<{ label: string; onClick: () => void }> }) {
+function DateField({ label, value, onChange, actions, disabled = false }: { label: string; value: string; onChange: (value: string) => void; actions: Array<{ label: string; onClick: () => void }>; disabled?: boolean }) {
   return (
     <label className="block">
       <span className="mb-2 block text-[11px] font-medium text-[#a4a4ad]">{label}</span>
-      <input type="datetime-local" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-xs text-[#e8e8ec] [color-scheme:dark] outline-none transition focus:border-[#7c6ff0] focus:ring-2 focus:ring-[#7c6ff0]/15" />
+      <input type="datetime-local" disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-white/[0.09] bg-[#0c0d10] px-3 text-xs text-[#e8e8ec] [color-scheme:dark] outline-none transition focus:border-[#7c6ff0] focus:ring-2 focus:ring-[#7c6ff0]/15 disabled:opacity-50" />
       <div className="mt-2 flex gap-1.5">
-        {actions.map((action) => <button key={action.label} type="button" onClick={action.onClick} className="rounded-md border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-medium text-[#85858f] hover:bg-white/[0.05] hover:text-[#d4d4d9]">{action.label}</button>)}
+        {!disabled && actions.map((action) => <button key={action.label} type="button" onClick={action.onClick} className="rounded-md border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-medium text-[#85858f] hover:bg-white/[0.05] hover:text-[#d4d4d9]">{action.label}</button>)}
       </div>
     </label>
   );
