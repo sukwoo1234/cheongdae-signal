@@ -13,6 +13,37 @@ type MatchRow = {
 
 type CardRow = { id: string; user_id: string; one_liner: string };
 type UserRow = { id: string; email: string; gender: string | null };
+const PAGE_SIZE = 500;
+const USER_LOOKUP_SIZE = 100;
+
+async function loadMatches(admin: ReturnType<typeof createAdminClient>) {
+  const rows: MatchRow[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("matches")
+      .select("id, viewer_user_id, viewed_card_id, bonus, selection_number, created_at")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) return { rows: null, error };
+    rows.push(...((data ?? []) as MatchRow[]));
+    if (!data || data.length < PAGE_SIZE) return { rows, error: null };
+  }
+}
+
+async function loadCards(admin: ReturnType<typeof createAdminClient>) {
+  const rows: CardRow[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("cards")
+      .select("id, user_id, one_liner")
+      .order("id", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) return { rows: null, error };
+    rows.push(...((data ?? []) as CardRow[]));
+    if (!data || data.length < PAGE_SIZE) return { rows, error: null };
+  }
+}
 
 export async function GET() {
   const { user } = await getAdminContext();
@@ -20,15 +51,12 @@ export async function GET() {
 
   const admin = createAdminClient();
   const [
-    { data: matches, error: matchError },
-    { data: cards, error: cardError },
+    { rows: matchRows, error: matchError },
+    { rows: cardRows, error: cardError },
     { data: cumulativeMatches, error: cumulativeError },
   ] = await Promise.all([
-    admin
-      .from("matches")
-      .select("id, viewer_user_id, viewed_card_id, bonus, selection_number, created_at")
-      .order("created_at", { ascending: false }),
-    admin.from("cards").select("id, user_id, one_liner"),
+    loadMatches(admin),
+    loadCards(admin),
     admin.rpc("admin_event_match_count"),
   ]);
 
@@ -36,8 +64,7 @@ export async function GET() {
     return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
 
-  const matchRows = (matches ?? []) as MatchRow[];
-  const cardRows = (cards ?? []) as CardRow[];
+  if (!matchRows || !cardRows) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   if (matchRows.length === 0) {
     const totalSelections = Math.max(Number(cumulativeMatches ?? 0), 0);
     return NextResponse.json(
@@ -62,13 +89,18 @@ export async function GET() {
     if (target) userIds.add(target.user_id);
   }
 
-  const { data: users, error: userError } = await admin
-    .from("users")
-    .select("id, email, gender")
-    .in("id", Array.from(userIds));
-  if (userError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  const userRows: UserRow[] = [];
+  const ids = Array.from(userIds);
+  for (let offset = 0; offset < ids.length; offset += USER_LOOKUP_SIZE) {
+    const { data, error } = await admin
+      .from("users")
+      .select("id, email, gender")
+      .in("id", ids.slice(offset, offset + USER_LOOKUP_SIZE));
+    if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+    userRows.push(...((data ?? []) as UserRow[]));
+  }
 
-  const userById = new Map(((users ?? []) as UserRow[]).map((entry) => [entry.id, entry]));
+  const userById = new Map(userRows.map((entry) => [entry.id, entry]));
   const directionMap = new Map<string, MatchRow>();
   for (const match of matchRows) {
     const target = cardById.get(match.viewed_card_id);

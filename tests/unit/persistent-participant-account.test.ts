@@ -124,7 +124,7 @@ describe("persistent participant accounts", () => {
     await db.close();
   }, 20_000);
 
-  it("refuses to migrate while event data still exists", async () => {
+  it("keeps an existing participant without assuming account-retention consent", async () => {
     const db = await createLegacyDatabase();
     await db.exec(`
       insert into auth.users(id, email, email_confirmed_at)
@@ -133,16 +133,17 @@ describe("persistent participant accounts", () => {
       values ('20000000-0000-4000-8000-000000000001', 'student@cju.ac.kr');
     `);
 
-    await expect(db.exec(migration)).rejects.toThrow("0024_REQUIRES_EMPTY_EVENT_DATA");
+    await db.exec(migration);
 
-    const columns = await db.query<{ column_name: string }>(`
-      select column_name
-        from information_schema.columns
-       where table_schema = 'public'
-         and table_name = 'users'
-         and column_name = 'retention_accepted_at'
+    const users = await db.query<{ id: string; consent: boolean; active: boolean }>(`
+      select id, retention_accepted_at is not null consent, last_active_at is not null active
+        from public.users
     `);
-    expect(columns.rows).toHaveLength(0);
+    expect(users.rows).toEqual([{
+      id: "20000000-0000-4000-8000-000000000001",
+      consent: false,
+      active: true,
+    }]);
 
     await db.close();
   });

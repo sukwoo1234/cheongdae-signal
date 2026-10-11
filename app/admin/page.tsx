@@ -166,6 +166,7 @@ export default function AdminConsole() {
   const [permanentBans, setPermanentBans] = useState<PermanentBan[]>([]);
   const [banMessage, setBanMessage] = useState("");
   const [banBusy, setBanBusy] = useState(false);
+  const [wipeBusy, setWipeBusy] = useState(false);
   const [matchOverview, setMatchOverview] = useState<MatchOverview>({ selections: [], mutual_pairs: [], total_selections: 0, visible_selections: 0, unavailable_selections: 0, mutual_count: 0 });
   const [matchSectionOpen, setMatchSectionOpen] = useState(false);
   const [matchView, setMatchView] = useState<"all" | "mutual">("all");
@@ -414,35 +415,53 @@ export default function AdminConsole() {
   }
 
   async function wipeData() {
+    if (wipeBusy || !stats) return;
     const confirmation = prompt("행사 데이터를 영구 폐기하려면 WIPE를 입력하세요. 6개월 차단 목록은 만료 전까지 유지됩니다.");
     if (confirmation !== "WIPE") return;
-    const response = await fetch("/api/admin/wipe-data", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({ confirm: "WIPE" }),
-    });
-    const data = await response.json().catch(() => null);
-    if (!data) {
-      alert("응답을 읽지 못했습니다. 폐기 여부를 직접 확인하세요.");
-      return;
+    const eventId = stats.config.event_id;
+    setWipeBusy(true);
+    try {
+      const response = await fetch("/api/admin/wipe-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ confirm: "WIPE", event_id: eventId }),
+      });
+      if (response.status === 409) {
+        const conflict = await response.json().catch(() => null);
+        alert(conflict?.error === "PURGE_IN_PROGRESS"
+          ? "다른 폐기 요청이 진행 중입니다. 잠시 후 현재 상태를 확인하세요."
+          : "행사 회차가 변경됐습니다. 현재 상태를 다시 불러옵니다.");
+        await loadStats(true);
+        return;
+      }
+      const data = await response.json().catch(() => null);
+      if (!data) {
+        alert("응답을 읽지 못했습니다. 폐기 여부를 직접 확인하세요.");
+        return;
+      }
+      const summary =
+        `삭제 — 매칭 ${data.deleted?.matches ?? 0} · 카드 ${data.deleted?.cards ?? 0} · ` +
+        `회차 참가자 ${data.deleted?.participants ?? 0} · 만료·미동의 계정 ${data.deleted?.authUsers ?? 0} · ` +
+        `차단목록 ${data.deleted?.bannedEmails ?? 0}`;
+      if (data.ok) {
+        alert(`폐기 완료\n\n${summary}\n\n보유 중인 프로필 ${data.remaining?.users ?? 0}건.`);
+      } else {
+        const left = data.remaining
+          ? `\n남은 것 — 매칭 ${data.remaining.matches} · 카드 ${data.remaining.cards} · 보유 프로필 ${data.remaining.users} · 정리 대상 프로필 ${data.remaining.pendingProfileCount ?? "확인 불가"}`
+          : "";
+        alert(`폐기가 완전히 끝나지 않았습니다.\n\n${summary}${left}\n\n오류:\n${(data.errors ?? ["(없음)"]).join("\n")}\n\n다시 실행하세요.`);
+      }
+      await loadStats(true);
+      await loadMatchOverview();
+    } catch {
+      alert("폐기 요청의 결과를 확인하지 못했습니다. 현재 상태를 다시 불러옵니다.");
+      await loadStats(true);
+    } finally {
+      setWipeBusy(false);
     }
-    const summary =
-      `삭제 — 매칭 ${data.deleted?.matches ?? 0} · 카드 ${data.deleted?.cards ?? 0} · ` +
-      `회차 참가자 ${data.deleted?.participants ?? 0} · 만료·미동의 계정 ${data.deleted?.authUsers ?? 0} · ` +
-      `차단목록 ${data.deleted?.bannedEmails ?? 0}`;
-    if (data.ok) {
-      alert(`폐기 완료\n\n${summary}\n\n보유 중인 인증 계정 ${data.remaining?.users ?? 0}건.`);
-    } else {
-      const left = data.remaining
-        ? `\n남은 것 — 매칭 ${data.remaining.matches} · 카드 ${data.remaining.cards} · 사용자 ${data.remaining.users} · 계정 ${data.remaining.authUsers}`
-        : "";
-      alert(`폐기가 완전히 끝나지 않았습니다.\n\n${summary}${left}\n\n오류:\n${(data.errors ?? ["(없음)"]).join("\n")}\n\n다시 실행하세요.`);
-    }
-    await loadStats(true);
-    await loadMatchOverview();
   }
 
   if (!stats || !draft) {
@@ -743,7 +762,7 @@ export default function AdminConsole() {
             <section className="rounded-xl border border-[#522831] bg-[#1a1114]">
               <SectionHeader eyebrow="Danger zone" title="데이터 폐기" description="행사 종료와 검증이 끝난 뒤에만 실행하세요." danger />
               <div className="p-4 sm:p-5">
-                <button onClick={wipeData} className="h-10 w-full rounded-lg border border-[#713340] bg-[#2a151a] text-[11px] font-semibold text-[#ff8495] transition hover:bg-[#35191f]">
+                <button onClick={wipeData} disabled={wipeBusy} className="h-10 w-full rounded-lg border border-[#713340] bg-[#2a151a] text-[11px] font-semibold text-[#ff8495] transition hover:bg-[#35191f] disabled:opacity-40">
                   행사 데이터 영구 폐기
                 </button>
                 <p className="mt-2 text-center text-[9px] leading-4 text-[#8e5962]">매칭·카드·연락처·회차 원장은 삭제합니다. 동의한 학교 인증 계정은 마지막 참여 후 최대 6개월 유지됩니다.</p>

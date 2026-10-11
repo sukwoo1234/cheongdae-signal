@@ -97,8 +97,13 @@ export default function Onboarding() {
           </label>
           <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3.5 transition hover:bg-[#f8fbff]">
             <input className="h-5 w-5 accent-[#4a86dc]" type="checkbox" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
-            <span className="flex flex-1 items-center justify-between text-sm text-[#263c5b]">
-              <span><Link href="/privacy" className="font-semibold text-[#3274d1] underline underline-offset-2">개인정보 처리방침</Link> 동의</span><span className="text-xl text-[#92a1b6]">›</span>
+            <span className="flex flex-1 items-center justify-between gap-2 text-sm text-[#263c5b]">
+              <span>
+                <Link href="/privacy" className="font-semibold text-[#3274d1] underline underline-offset-2">개인정보 처리방침</Link> 동의
+                <span className="mt-1 block text-xs leading-relaxed text-[#657893]">
+                  학교 인증 계정 정보는 마지막 회차 참여일부터 최대 6개월 보유됩니다.
+                </span>
+              </span><span className="text-xl text-[#92a1b6]">›</span>
             </span>
           </label>
         </div>

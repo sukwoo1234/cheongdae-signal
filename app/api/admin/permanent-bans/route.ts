@@ -25,8 +25,8 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
   if (!isAllowedCJUEmail(email) || isConfiguredAdminEmail(email) || !reason || reason.length > 500) {
     return NextResponse.json({ error: "INVALID_BAN" }, { status: 400 });
   }
@@ -54,7 +54,7 @@ export async function DELETE(req: Request) {
   if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!isAllowedCJUEmail(email) || isConfiguredAdminEmail(email)) {
     return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
   }

@@ -30,9 +30,12 @@ describe("admin match overview", () => {
       { id: "c", email: "c@cju.ac.kr", gender: "M" },
     ];
 
-    const matchQuery = { select: vi.fn(), order: vi.fn().mockResolvedValue({ data: matches, error: null }) };
+    const matchQuery = { select: vi.fn(), order: vi.fn(), range: vi.fn().mockResolvedValue({ data: matches, error: null }) };
     matchQuery.select.mockReturnValue(matchQuery);
-    const cardQuery = { select: vi.fn().mockResolvedValue({ data: cards, error: null }) };
+    matchQuery.order.mockReturnValue(matchQuery);
+    const cardQuery = { select: vi.fn(), order: vi.fn(), range: vi.fn().mockResolvedValue({ data: cards, error: null }) };
+    cardQuery.select.mockReturnValue(cardQuery);
+    cardQuery.order.mockReturnValue(cardQuery);
     const userQuery = { select: vi.fn(), in: vi.fn().mockResolvedValue({ data: users, error: null }) };
     userQuery.select.mockReturnValue(userQuery);
 
@@ -70,5 +73,48 @@ describe("admin match overview", () => {
     mocks.context.mockResolvedValue({ user: null });
     const response = await GET();
     expect(response.status).toBe(403);
+  });
+
+  it("loads selections and target cards beyond the PostgREST row cap", async () => {
+    const matches = Array.from({ length: 1001 }, (_, index) => ({
+      id: `match-${index}`, viewer_user_id: "viewer", viewed_card_id: "target-card",
+      bonus: false, selection_number: index + 1, created_at: "2026-09-30T01:00:00Z",
+    }));
+    const cards = [
+      ...Array.from({ length: 1000 }, (_, index) => ({
+        id: `filler-${String(index).padStart(4, "0")}`, user_id: `filler-user-${index}`, one_liner: "filler",
+      })),
+      { id: "target-card", user_id: "target", one_liner: "target" },
+    ];
+    const matchQuery = { select: vi.fn(), order: vi.fn(), range: vi.fn(async (from: number, to: number) => ({
+      data: matches.slice(from, to + 1), error: null,
+    })) };
+    matchQuery.select.mockReturnValue(matchQuery);
+    matchQuery.order.mockReturnValue(matchQuery);
+    const cardQuery = { select: vi.fn(), order: vi.fn(), range: vi.fn(async (from: number, to: number) => ({
+      data: cards.slice(from, to + 1), error: null,
+    })) };
+    cardQuery.select.mockReturnValue(cardQuery);
+    cardQuery.order.mockReturnValue(cardQuery);
+    const userQuery = { select: vi.fn(), in: vi.fn().mockResolvedValue({
+      data: [
+        { id: "viewer", email: "viewer@cju.ac.kr", gender: "M" },
+        { id: "target", email: "target@cju.ac.kr", gender: "F" },
+      ], error: null,
+    }) };
+    userQuery.select.mockReturnValue(userQuery);
+    mocks.admin.mockReturnValue({
+      from: vi.fn((table: string) => table === "matches" ? matchQuery : table === "cards" ? cardQuery : userQuery),
+      rpc: vi.fn().mockResolvedValue({ data: 1001, error: null }),
+    });
+
+    const response = await GET();
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.visible_selections).toBe(1001);
+    expect(body.unavailable_selections).toBe(0);
+    expect(body.selections[1000].target.one_liner).toBe("target");
+    expect(matchQuery.range).toHaveBeenCalledTimes(3);
+    expect(cardQuery.range).toHaveBeenCalledTimes(3);
   });
 });

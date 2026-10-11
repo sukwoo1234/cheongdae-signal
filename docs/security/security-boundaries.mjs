@@ -1,4 +1,4 @@
-// Isolated PGlite regression for the current migrations through 0028.
+// Isolated PGlite regression for the current migrations through 0029.
 // All identities and contacts below are synthetic; no remote service is used.
 import { createRequire } from 'node:module';
 import { readFile, readdir } from 'node:fs/promises';
@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 const require = createRequire(new URL('../../package.json', import.meta.url));
 const { PGlite } = require('@electric-sql/pglite');
 const db = new PGlite();
+const purgeToken = '90000000-0000-4000-8000-000000000001';
 let checks = 0;
 function secured(name, actual) {
   assert.ok(actual, name);
@@ -53,8 +54,8 @@ for (const file of migrations) {
     .replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('current migrations through 0028 apply cleanly',
-  migrations.length >= 27 && migrations.some((name) => name.startsWith('0028_enforce_security_boundaries')));
+secured('current migrations through 0029 apply cleanly',
+  migrations.length >= 28 && migrations.some((name) => name.startsWith('0029_bind_event_purge_to_event')));
 
 const A = '10000000-0000-4000-8000-000000000001';
 const B = '10000000-0000-4000-8000-000000000002';
@@ -131,9 +132,13 @@ secured('accepted target appears after both parties consent', (await db.query('s
 await owner();
 await db.query('update public.users set retention_accepted_at=now() where id in ($1,$2)', [B, D]);
 await db.query("select public.add_permanent_ban($1,'test',$2)", [emails[3], A]);
-await db.query('select public.begin_event_purge()');
-await db.query('select public.purge_current_event_data()');
-const nextEvent = (await db.query('select public.finish_event_purge() as event_id')).rows[0].event_id;
+await db.query('select public.begin_event_purge($1,$2)', [initialEvent, purgeToken]);
+await db.query('select public.purge_current_event_data($1,$2)', [initialEvent, purgeToken]);
+const nextEvent = (await db.query('select public.finish_event_purge($1,$2) as event_id', [initialEvent, purgeToken])).rows[0].event_id;
+await rejected('completed purge cannot be replayed for the next event',
+  () => db.query('select public.begin_event_purge($1,$2)', [initialEvent, purgeToken]), 'STALE_EVENT');
+secured('stale purge retry did not lock the next event',
+  (await db.query('select purging from public.session_config where id=1')).rows[0].purging === false);
 const retained = (await db.query('select id,banned,banned_reason from public.users where id=$1', [D])).rows[0];
 secured('purge completes while retained permanent-ban account exists', nextEvent !== initialEvent);
 secured('permanent ban persists across event purge', retained.banned && retained.banned_reason === 'permanent_ban');

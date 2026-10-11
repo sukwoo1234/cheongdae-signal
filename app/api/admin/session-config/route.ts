@@ -31,7 +31,10 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "INVALID_BODY" }, { status: 400 });
+  }
   const updates: Record<string, unknown> = {};
 
   for (const key of ALLOWED) {

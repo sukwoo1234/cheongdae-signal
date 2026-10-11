@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { isAccountRetentionExpired } from "@/lib/account-retention";
+import { hasActiveEventParticipation, isAccountRetentionExpired } from "@/lib/account-retention";
 
 function response(next: string | null, status = 200) {
   return NextResponse.json(
@@ -46,13 +46,6 @@ export async function GET() {
     .maybeSingle();
 
   if (profileError || !profile) return response(null, 401);
-  if (isAccountRetentionExpired(profile.last_active_at)) {
-    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
-    if (deleteError) return response(null, 503);
-    await supabase.auth.signOut().catch(() => {});
-    return response(null, 401);
-  }
-  if (profile.banned) return response(null, 403);
 
   const { data: participantData, error: participantError } = await admin.rpc(
     "admin_event_participant_state",
@@ -60,6 +53,29 @@ export async function GET() {
   );
   if (participantError) return response(null, 503);
   const participant = Array.isArray(participantData) ? participantData[0] : participantData;
+
+  if (isAccountRetentionExpired(profile.last_active_at)) {
+    let currentEventActive = false;
+    if (participant) {
+      const { data: currentConfig, error: currentConfigError } = await admin
+        .from("session_config")
+        .select("ends_at, purging")
+        .eq("id", 1)
+        .single();
+      // 설정 조회 장애를 계정·카드 삭제로 바꾸지 않는다.
+      if (currentConfigError || !currentConfig) return response(null, 503);
+      currentEventActive = hasActiveEventParticipation(participant, currentConfig);
+    }
+
+    if (!currentEventActive) {
+      const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
+      if (deleteError) return response(null, 503);
+      await supabase.auth.signOut().catch(() => {});
+      return response(null, 401);
+    }
+  }
+  if (profile.banned) return response(null, 403);
+
   if (!participant) return response("/join");
   if (participant.banned) return response(null, 403);
   if (!profile.gender) return response("/onboarding");

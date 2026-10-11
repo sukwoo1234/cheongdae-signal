@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/auth";
 import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
 import { createEventSubjectKey } from "@/lib/event-identity";
-import { isAccountRetentionExpired } from "@/lib/account-retention";
+import { hasActiveEventParticipation, isAccountRetentionExpired } from "@/lib/account-retention";
 
 /**
  * 로그인 직후 공통 마무리 처리. 어느 콜백 경로로 들어왔든 여기를 지난다.
@@ -95,7 +95,7 @@ export async function finishSignIn(
 
   const { data: config, error: configError } = await admin
     .from("session_config")
-    .select("event_id, purging")
+    .select("event_id, ends_at, purging")
     .eq("id", 1)
     .single();
   if (configError || !config || config.purging) {
@@ -124,10 +124,25 @@ export async function finishSignIn(
     return "/?error=auth_failed";
   }
 
-  // 6개월이 지난 계정이 새 로그인 메일로 다시 인증된 경우에는 남아 있던
-  // 프로필을 삭제하고 최초 참여자처럼 온보딩한다.
   let existingProfile = foundProfile;
-  if (existingProfile && isAccountRetentionExpired(existingProfile.last_active_at)) {
+  let participantState: { banned?: boolean } | null = null;
+  if (existingProfile) {
+    const { data, error } = await admin.rpc(
+      "admin_event_participant_state",
+      { p_user_id: user.id },
+    );
+    if (error) {
+      await supabase.auth.signOut().catch(() => {});
+      clearState();
+      return "/?error=auth_failed";
+    }
+    participantState = (Array.isArray(data) ? data[0] : data) ?? null;
+  }
+
+  // 이전 회차의 계정은 6개월 뒤 정리한다. 현재 회차 참가자의 카드·매칭은
+  // 안내된 회차 종료일까지 유지하되, 마지막 참여 시각은 갱신하지 않는다.
+  if (existingProfile && isAccountRetentionExpired(existingProfile.last_active_at) &&
+      !hasActiveEventParticipation(participantState, config)) {
     const { error: expiredDeleteError } = await admin.from("users").delete().eq("id", user.id);
     if (expiredDeleteError) {
       await supabase.auth.signOut().catch(() => {});
@@ -141,21 +156,11 @@ export async function finishSignIn(
   if (existingProfile) {
     // 이전 회차에서 인증된 계정은 로그인이 완료되어도 자동으로 현재
     // 회차 참여자로 세지 않는다. 재참여 화면에서 버튼을 누른 뒤 원장을 연결한다.
-    const { data: participantState, error: participantError } = await admin.rpc(
-      "admin_event_participant_state",
-      { p_user_id: user.id },
-    );
-    if (participantError) {
-      await supabase.auth.signOut().catch(() => {});
-      clearState();
-      return "/?error=auth_failed";
-    }
-    const state = Array.isArray(participantState) ? participantState[0] : participantState;
-    if (!state) {
+    if (!participantState) {
       clearState();
       return "/join";
     }
-    if (state.banned) {
+    if (participantState.banned) {
       await supabase.auth.signOut().catch(() => {});
       clearState();
       return "/?error=banned";

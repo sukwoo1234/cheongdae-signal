@@ -8,20 +8,10 @@
 -- 라우트가 retention_accepted_at/last_active_at을 기준으로 처리한다.
 -- =============================================================================
 
--- 이 전환은 기존 회차를 예전 폐기 방식으로 완전히 비운 직후에만 수행한다.
--- 데이터가 남아 있으면 어떤 스키마 변경도 시작하기 전에 실패시킨다.
-do $$
-begin
-  if exists(select 1 from public.users)
-     or exists(select 1 from public.cards)
-     or exists(select 1 from public.matches)
-     or exists(select 1 from public.banned_emails)
-     or exists(select 1 from public.magic_link_throttle)
-     or exists(select 1 from private.event_participants) then
-    raise exception '0024_REQUIRES_EMPTY_EVENT_DATA';
-  end if;
-end;
-$$;
+-- 이미 진행 중인 회차의 카드·매칭·참가 원장은 그대로 둔다. 기존 계정에
+-- 보유 동의를 소급 적용하지 않으며, 다음 행사 폐기 때 동의 없는 계정은 삭제한다.
+-- 이 파일은 운영 DB에 빈 회차에서 적용된 뒤, 데이터가 남은 스테이징에도
+-- 동일한 최종 스키마를 적용할 수 있도록 보존 방식만 수정했다.
 
 alter table public.users
   add column if not exists last_active_at timestamptz not null default now(),

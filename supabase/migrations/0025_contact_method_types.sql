@@ -6,18 +6,20 @@
 -- 저장해 인스타그램·카카오톡·휴대전화를 입력부터 공개까지 명확히 구분한다.
 -- =============================================================================
 
+-- 기존 카드가 있는 DB에도 적용한다. 저장된 값으로 휴대전화만 식별할 수
+-- 있으므로 나머지는 종전 입력 안내에 맞춰 인스타그램으로 표시한다.
+-- 생성 칼럼으로 한 번 계산한 뒤 일반 칼럼으로 바꾸면 UPDATE 트리거가
+-- 실행되지 않아 기존 카드의 updated_at과 매칭 이력이 보존된다.
 alter table public.cards
-  add column if not exists contact_type text;
+  add column if not exists contact_type text generated always as (
+    case
+      when instagram_id ~ '^01(0|1|[6-9])[0-9]{7,8}$' then 'phone'
+      else 'instagram'
+    end
+  ) stored;
 
--- 과거 휴대전화 값은 안전하게 식별할 수 있다. ID는 둘을 자동 판별할 수 없으므로
--- 기존 기본 안내와 같은 인스타그램으로 두며, 현재 운영 데이터가 폐기된 시점에
--- 적용하므로 다음 회차의 신규 카드는 모두 사용자가 직접 종류를 선택한다.
-update public.cards
-   set contact_type = case
-     when instagram_id ~ '^01(0|1|[6-9])[0-9]{7,8}$' then 'phone'
-     else 'instagram'
-   end
- where contact_type is null;
+alter table public.cards
+  alter column contact_type drop expression;
 
 alter table public.cards
   alter column contact_type set default 'instagram',

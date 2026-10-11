@@ -48,10 +48,17 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const ip = clientIp(req);
 
+  // 실패한 CAPTCHA로 공유 IP의 발송 한도를 태울 수 없어야 한다.
+  // service_role 요청은 Supabase Auth의 CAPTCHA 검사도 우회하므로
+  // 일회용 토큰을 먼저 소비하고 검증한 뒤에만 quota를 증가시킨다.
+  if (!(await verifyTurnstileToken(captchaToken, ip))) {
+    return NextResponse.json({ error: "CAPTCHA_FAILED" }, { status: 400 });
+  }
+
   // 서버측 한도. 예전에는 쿨다운이 app/auth/sent/page.tsx 의 클라이언트 타이머뿐이라
   // 이 엔드포인트를 직접 호출하면 무제한이었고, 커스텀 SMTP의 일일 할당량을
-  // 태워서 실제 학생들의 로그인을 막을 수 있었다.
-  // IP를 먼저 본다 — 이메일을 바꿔가며 도는 스크립트는 이쪽에서만 걸린다.
+  // 태워서 실제 학생들의 로그인을 막을 수 있었다. 검증된 요청에서는 IP를
+  // 이메일보다 먼저 검사해 주소를 바꿔가며 도는 스크립트를 제한한다.
   const ipQuota = await admin.rpc("consume_magic_link_quota", {
     p_key_hash: hashKey("ip", ip),
     p_scope: "ip",
@@ -60,12 +67,6 @@ export async function POST(req: Request) {
   });
   if (ipQuota.error || ipQuota.data !== true) {
     return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
-  }
-
-  // service_role 요청은 Supabase Auth가 CAPTCHA를 검사하지 않는다. 따라서
-  // 이메일별 quota와 SMTP를 쓰기 전에 앱 서버가 일회용 토큰을 직접 검증한다.
-  if (!(await verifyTurnstileToken(captchaToken, ip))) {
-    return NextResponse.json({ error: "CAPTCHA_FAILED" }, { status: 400 });
   }
 
   const emailQuota = await admin.rpc("consume_magic_link_quota", {

@@ -5,6 +5,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const db = new PGlite();
+const purgeToken = '90000000-0000-4000-8000-000000000001';
+const otherPurgeToken = '90000000-0000-4000-8000-000000000002';
 let checks = 0;
 function secured(name, condition) {
   assert.ok(condition, name);
@@ -68,7 +70,7 @@ secured(
     !anonymousSessionPrivileges.board_open,
 );
 const purgeDefinition = (await db.query(
-  "select pg_get_functiondef('public.purge_current_event_data()'::regprocedure) as definition",
+  "select pg_get_functiondef('public.purge_current_event_data(uuid,uuid)'::regprocedure) as definition",
 )).rows[0].definition.toLowerCase();
 secured(
   'every event-purge delete has an explicit predicate for safeupdate deployments',
@@ -476,16 +478,29 @@ await expectDbError(
 await owner();
 const beforePurge = (await db.query('select * from public.event_purge_status()')).rows[0];
 secured('purge status includes the durable participant ledger', beforePurge.participants === 4);
-await db.query('select public.begin_event_purge()');
-await db.query('select public.purge_current_event_data()');
+await db.query('select public.begin_event_purge($1,$2)', [eventId, purgeToken]);
+await expectDbError('a second worker cannot claim the active event purge',
+  () => db.query('select public.begin_event_purge($1,$2)', [eventId, otherPurgeToken]),
+  'PURGE_BUSY');
+await expectDbError('a worker without the claim cannot delete event data',
+  () => db.query('select public.purge_current_event_data($1,$2)', [eventId, otherPurgeToken]),
+  'PURGE_LEASE_LOST');
+await db.query('select public.purge_current_event_data($1,$2)', [eventId, purgeToken]);
 const empty = (await db.query('select * from public.event_purge_status()')).rows[0];
 secured(
   'event purge removes cards, matches, event bans, throttles, and ledger rows',
   empty.matches === 0 && empty.cards === 0 && empty.banned_emails === 0 &&
     empty.throttles === 0 && empty.participants === 0,
 );
-const nextEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
+const nextEventId = (await db.query('select public.finish_event_purge($1,$2) as id', [eventId, purgeToken])).rows[0].id;
 secured('finishing a purge rotates the event identifier', nextEventId !== eventId);
+await expectDbError(
+  'a completed purge request cannot start a purge of the next event',
+  () => db.query('select public.begin_event_purge($1,$2)', [eventId, purgeToken]),
+  'STALE_EVENT',
+);
+secured('the next event remains open after a stale purge retry',
+  (await db.query('select purging from public.session_config where id=1')).rows[0].purging === false);
 
 const nextSubjectA = 'e'.repeat(64);
 const nextRegistration = await register(nextEventId, A3, 'a@cju.ac.kr', nextSubjectA);
@@ -521,9 +536,9 @@ secured(
 );
 
 await db.query('select public.add_permanent_ban($1,$2,$3)', ['a@cju.ac.kr', 'confirmed abuse', A]);
-await db.query('select public.begin_event_purge()');
-await db.query('select public.purge_current_event_data()');
-const thirdEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
+await db.query('select public.begin_event_purge($1,$2)', [nextEventId, purgeToken]);
+await db.query('select public.purge_current_event_data($1,$2)', [nextEventId, purgeToken]);
+const thirdEventId = (await db.query('select public.finish_event_purge($1,$2) as id', [nextEventId, purgeToken])).rows[0].id;
 secured(
   'event purge retains only the separate permanent ban',
   (await db.query('select count(*)::int as n from public.permanent_bans')).rows[0].n === 1 &&
@@ -555,9 +570,9 @@ secured(
   'expired cross-event ban does not lift the current event ban',
   (await db.query('select count(*)::int as n from public.banned_emails where email=$1', ['a@cju.ac.kr'])).rows[0].n === 1,
 );
-await db.query('select public.begin_event_purge()');
-await db.query('select public.purge_current_event_data()');
-const fourthEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
+await db.query('select public.begin_event_purge($1,$2)', [thirdEventId, purgeToken]);
+await db.query('select public.purge_current_event_data($1,$2)', [thirdEventId, purgeToken]);
+const fourthEventId = (await db.query('select public.finish_event_purge($1,$2) as id', [thirdEventId, purgeToken])).rows[0].id;
 secured(
   'an expired ban cannot block a new event even before cleanup runs',
   (await register(fourthEventId, A3, 'a@cju.ac.kr', '0'.repeat(64))).rows[0].remaining === 1,

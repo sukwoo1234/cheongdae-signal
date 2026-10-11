@@ -26,7 +26,7 @@ export async function PATCH(req: Request) {
   if (!user) return denialResponse("UNAUTHENTICATED");
   if (!profile?.gender) return NextResponse.json({ error: "ONBOARDING_INCOMPLETE" }, { status: 403 });
 
-  const body = await req.json().catch(() => ({}));
+  const body = (await req.json().catch(() => null)) ?? {};
   const updates: Record<string, unknown> = {};
 
   // 생성(POST)과 동일한 검증을 적용한다. 예전에는 여기가 타입 체크뿐이라
@@ -57,7 +57,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "NO_CHANGES" }, { status: 400 });
   }
 
-  const { error } = await createAdminClient().from("cards").update(updates).eq("user_id", user.id);
+  const { data, error } = await createAdminClient()
+    .from("cards")
+    .update(updates)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "CARD_NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

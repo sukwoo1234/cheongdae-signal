@@ -120,13 +120,17 @@ describe("login security boundary", () => {
     expect(admin.auth.signInWithOtp).not.toHaveBeenCalled();
   });
 
-  it("rejects a token that Cloudflare Siteverify does not validate", async () => {
+  it("does not consume a shared IP quota for invalid CAPTCHA attempts", async () => {
     const { admin } = adminMock();
-    vi.mocked(fetch).mockResolvedValueOnce(turnstileResult({ success: false }));
+    vi.mocked(fetch).mockResolvedValue(turnstileResult({ success: false }));
 
-    expect((await sendLink(request())).status).toBe(400);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const response = await sendLink(request());
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "CAPTCHA_FAILED" });
+    }
     expect(admin.auth.signInWithOtp).not.toHaveBeenCalled();
-    expect(admin.rpc).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).not.toHaveBeenCalled();
   });
 
   it("fails closed when the banned-address lookup is unavailable", async () => {

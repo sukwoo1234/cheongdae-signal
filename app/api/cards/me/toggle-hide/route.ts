@@ -10,14 +10,17 @@ export async function POST(req: Request) {
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
-  const { hidden } = await req.json().catch(() => ({}));
+  const { hidden } = (await req.json().catch(() => null)) ?? {};
   if (typeof hidden !== "boolean") {
     return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
   }
-  const { error } = await createAdminClient()
+  const { data, error } = await createAdminClient()
     .from("cards")
     .update({ hidden_by_user: hidden })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
   if (error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "CARD_NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

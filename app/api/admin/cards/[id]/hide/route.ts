@@ -10,7 +10,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!user) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   const { id } = await ctx.params;
   const body = await req.json().catch(() => ({}));
-  if (typeof body.hidden !== "boolean") {
+  if (typeof body?.hidden !== "boolean") {
     return NextResponse.json({ error: "INVALID_HIDDEN" }, { status: 400 });
   }
   const admin = createAdminClient();

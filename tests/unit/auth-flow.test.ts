@@ -36,6 +36,7 @@ describe("finishSignIn runtime boundary", () => {
         select: vi.fn(),
         eq: vi.fn(),
         gt: vi.fn(),
+        delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
         maybeSingle: vi.fn().mockResolvedValue(result),
         single: vi.fn().mockResolvedValue(result),
       };
@@ -47,7 +48,7 @@ describe("finishSignIn runtime boundary", () => {
     const bannedEmails = chain({ data: null, error: null });
     const permanentBans = chain({ data: null, error: null });
     const sessionConfig = chain({
-      data: { event_id: "00000000-0000-4000-8000-000000000099", purging: false },
+      data: { event_id: "00000000-0000-4000-8000-000000000099", ends_at: "2099-01-01T00:00:00Z", purging: false },
       error: null,
     });
     const users = chain({ data: null, error: null });
@@ -65,7 +66,7 @@ describe("finishSignIn runtime boundary", () => {
     };
     mocks.createAdminClient.mockReturnValue(admin);
 
-    return { signOut, permanentBans, admin, users };
+    return { signOut, permanentBans, admin, users, sessionConfig, cards };
   }
 
   beforeEach(() => {
@@ -166,6 +167,55 @@ describe("finishSignIn runtime boundary", () => {
     expect(admin.rpc).toHaveBeenCalledWith("admin_event_participant_state", {
       p_user_id: "student-id",
     });
+  });
+
+  it("keeps an expired retention profile and card during its current event", async () => {
+    const { admin, users, cards } = useValidSession();
+    users.maybeSingle.mockResolvedValue({
+      data: { gender: "M", banned: false, last_active_at: "2020-01-01T00:00:00Z" }, error: null,
+    });
+    admin.rpc.mockResolvedValue({ data: [{ banned: false }], error: null });
+    cards.eq.mockResolvedValue({ count: 1, error: null });
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/board");
+    expect(users.delete).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("admin_event_participant_state", {
+      p_user_id: "student-id",
+    });
+    expect(admin.rpc).not.toHaveBeenCalledWith("register_event_participant", expect.anything());
+  });
+
+  it("still removes an expired retained profile outside the current event", async () => {
+    const { admin, users } = useValidSession();
+    users.maybeSingle.mockResolvedValue({
+      data: { gender: "M", banned: false, last_active_at: "2020-01-01T00:00:00Z" }, error: null,
+    });
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "admin_event_participant_state" ? [] : null,
+      error: null,
+    }));
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/onboarding");
+    expect(users.delete).toHaveBeenCalledOnce();
+    expect(admin.rpc).toHaveBeenCalledWith("register_event_participant", expect.anything());
+  });
+
+  it("does not extend retention after the current event ends", async () => {
+    const { admin, users, sessionConfig } = useValidSession();
+    users.maybeSingle.mockResolvedValue({
+      data: { gender: "M", banned: false, last_active_at: "2020-01-01T00:00:00Z" }, error: null,
+    });
+    sessionConfig.single.mockResolvedValue({
+      data: { event_id: "00000000-0000-4000-8000-000000000099", ends_at: "2020-01-02T00:00:00Z", purging: false },
+      error: null,
+    });
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "admin_event_participant_state" ? [{ banned: false }] : null,
+      error: null,
+    }));
+
+    await finishSignIn("a".repeat(43));
+    expect(users.delete).toHaveBeenCalledOnce();
   });
 
   it("rejects a permanently banned account at the callback boundary", async () => {

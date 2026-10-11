@@ -22,7 +22,10 @@ export default function MyCardPage() {
   const [contactType, setContactType] = useState<ContactType>("instagram");
   const [color, setColor] = useState<PostitColor>("yellow");
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [hidden, setHidden] = useState(false);
+  const [togglingHide, setTogglingHide] = useState(false);
+  const [hideError, setHideError] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const router = useRouter();
@@ -46,28 +49,44 @@ export default function MyCardPage() {
 
   async function save() {
     setSaving(true);
-    await fetch("/api/cards/me", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, contact_type: contactType, color }),
-    });
-    setSaving(false);
+    setSaveStatus("idle");
+    try {
+      const response = await fetch("/api/cards/me", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, contact_type: contactType, color }),
+      });
+      setSaveStatus(response.ok ? "success" : "error");
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleHide() {
     const next = !hidden;
-    setHidden(next);
-    await fetch("/api/cards/me/toggle-hide", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({ hidden: next }),
-    });
+    setTogglingHide(true);
+    setHideError(false);
+    try {
+      const response = await fetch("/api/cards/me/toggle-hide", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ hidden: next }),
+      });
+      if (!response.ok) throw new Error("TOGGLE_FAILED");
+      setHidden(next);
+    } catch {
+      setHideError(true);
+    } finally {
+      setTogglingHide(false);
+    }
   }
 
   async function deleteAccount() {
@@ -110,30 +129,40 @@ export default function MyCardPage() {
           value={oneLiner}
           onChange={(e) => {
             const v = e.target.value;
-            if ([...v].length <= ONELINER_MAX_LENGTH) setOneLiner(v);
+            if ([...v].length <= ONELINER_MAX_LENGTH) {
+              setOneLiner(v);
+              setSaveStatus("idle");
+            }
           }}
         />
         <ContactMethodTabs
           type={contactType}
           value={contactValue}
-          onTypeChange={setContactType}
-          onValueChange={setContactValue}
+          onTypeChange={(value) => { setContactType(value); setSaveStatus("idle"); }}
+          onValueChange={(value) => { setContactValue(value); setSaveStatus("idle"); }}
         />
         <label className="mb-3 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><PaletteIcon />카드 색상</label>
-        <ColorPicker selected={color} onChange={setColor} />
+        <ColorPicker selected={color} onChange={(value) => { setColor(value); setSaveStatus("idle"); }} />
 
         <Button onClick={save} disabled={saving} className="mt-6 h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#0b2b4c,#00213e)] text-base">
           {saving ? "저장 중..." : "저장"}
         </Button>
+        {saveStatus !== "idle" && (
+          <p role="status" className={`mt-2 text-center text-xs ${saveStatus === "success" ? "text-[#0b8f7e]" : "text-red-600"}`}>
+            {saveStatus === "success" ? "저장했어요." : "저장하지 못했어요. 다시 시도해주세요."}
+          </p>
+        )}
 
         <div className="my-7 border-t border-[#e5ebf2]"></div>
 
         <button
           onClick={toggleHide}
+          disabled={togglingHide}
           className={`min-h-13 w-full rounded-2xl border-2 px-3 py-3 text-sm font-bold transition ${hidden ? "border-[#9cddd4] bg-[#eefaf8] text-[#0b8f7e]" : "border-[#ffb8c5] bg-[#fffafb] text-[#e63d58]"}`}
         >
-          {hidden ? "다시 보드에 올리기" : "카드 내리기 (숨기기)"}
+          {togglingHide ? "변경 중..." : hidden ? "다시 보드에 올리기" : "카드 내리기 (숨기기)"}
         </button>
+        {hideError && <p role="alert" className="mt-2 text-center text-xs text-red-600">공개 상태를 바꾸지 못했어요. 다시 시도해주세요.</p>}
         <p className="mt-2 text-center text-[10px] text-[#8390a2]">
           이미 본 사람에게 공개된 연락처는 회수되지 않아요.
         </p>

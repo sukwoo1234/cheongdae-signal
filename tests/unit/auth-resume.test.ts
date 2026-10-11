@@ -11,11 +11,12 @@ function makeClient({
   card = { id: "card-1" } as { id: string } | null,
   endsAt = "2099-01-01T00:00:00.000Z",
   participant = true,
+  lastActiveAt = "2099-01-01T00:00:00Z",
 } = {}) {
   const profileQuery = {
     select: vi.fn(),
     eq: vi.fn(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: { gender, banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { gender, banned: false, last_active_at: lastActiveAt }, error: null }),
   };
   profileQuery.select.mockReturnValue(profileQuery);
   profileQuery.eq.mockReturnValue(profileQuery);
@@ -30,7 +31,7 @@ function makeClient({
 
   mocks.admin.mockReturnValue({
     auth: { admin: { deleteUser: vi.fn().mockResolvedValue({ error: null }) } },
-    from: vi.fn(() => profileQuery),
+    from: vi.fn((table: string) => table === "session_config" ? configQuery : profileQuery),
     rpc: vi.fn().mockResolvedValue({
       data: participant ? [{ allowance: 1, used: 0, remaining: 1, banned: false }] : [],
       error: null,
@@ -47,6 +48,7 @@ function makeClient({
         data: { user: { id: "user-1", email: "student@cju.ac.kr", email_confirmed_at: "2026-09-01" } },
         error: null,
       }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
     },
     from: vi.fn(() => configQuery),
     rpc: vi.fn().mockResolvedValue({ data: card ? [card] : [], error: null }),
@@ -95,5 +97,33 @@ describe("auth resume", () => {
     mocks.client.mockResolvedValue(makeClient({ endsAt: "2020-01-01T00:00:00.000Z" }));
     const response = await GET();
     expect(await response.json()).toEqual({ next: "/end" });
+  });
+
+  it("preserves a current participant and card after the account retention date", async () => {
+    mocks.client.mockResolvedValue(makeClient({ lastActiveAt: "2020-01-01T00:00:00Z" }));
+    const response = await GET();
+
+    expect(await response.json()).toEqual({ next: "/board" });
+    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("deletes an expired account with no current-event participation", async () => {
+    mocks.client.mockResolvedValue(makeClient({
+      lastActiveAt: "2020-01-01T00:00:00Z", participant: false,
+    }));
+    const response = await GET();
+
+    expect(response.status).toBe(401);
+    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
+  });
+
+  it("deletes an expired account after its current event has ended", async () => {
+    mocks.client.mockResolvedValue(makeClient({
+      lastActiveAt: "2020-01-01T00:00:00Z", endsAt: "2020-01-02T00:00:00Z",
+    }));
+    const response = await GET();
+
+    expect(response.status).toBe(401);
+    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
   });
 });

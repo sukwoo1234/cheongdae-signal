@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
-  const { gender, terms, privacy } = await req.json().catch(() => ({}));
+  const { gender, terms, privacy } = (await req.json().catch(() => null)) ?? {};
 
   if (!["M", "F"].includes(gender)) {
     return NextResponse.json({ error: "INVALID_GENDER" }, { status: 400 });

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (denial) return denialResponse(denial);
   if (!user) return denialResponse("UNAUTHENTICATED");
 
-  const { card_id } = await req.json().catch(() => ({}));
+  const { card_id } = (await req.json().catch(() => null)) ?? {};
   if (typeof card_id !== "string" || !card_id) {
     return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
   }
@@ -40,8 +40,11 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    const code = KNOWN_ERRORS.find((k) => error.message.includes(k)) || "RPC_ERROR";
-    return NextResponse.json({ error: code }, { status: 400 });
+    const code = KNOWN_ERRORS.find((k) => error.message.includes(k));
+    return NextResponse.json(
+      { error: code ?? "RPC_ERROR" },
+      { status: code ? 400 : 500 },
+    );
   }
 
   const row = Array.isArray(data) ? data[0] : data;

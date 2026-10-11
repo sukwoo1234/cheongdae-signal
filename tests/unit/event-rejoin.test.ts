@@ -64,7 +64,10 @@ describe("event rejoin", () => {
       error: null,
     });
     const cards = chain({ data: null, count: 0, error: null });
-    const rpc = vi.fn().mockResolvedValue({ data: [{ remaining: 2 }], error: null });
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "admin_event_participant_state" ? [] : [{ remaining: 2 }],
+      error: null,
+    }));
     mocks.admin.mockReturnValue({
       rpc,
       from: vi.fn((table: string) => ({
@@ -108,7 +111,7 @@ describe("event rejoin", () => {
     });
     const deleteUser = vi.fn().mockResolvedValue({ error: null });
     mocks.admin.mockReturnValue({
-      rpc: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
       from: vi.fn((table: string) => table === "users" ? profile : table === "session_config" ? config : empty),
       auth: { admin: { deleteUser } },
     });
@@ -118,5 +121,43 @@ describe("event rejoin", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "ACCOUNT_EXPIRED" });
     expect(deleteUser).toHaveBeenCalledWith("user-1");
+  });
+
+  it.each([
+    ["expired", "2020-01-01T00:00:00Z"],
+    ["not expired", "2099-01-01T00:00:00Z"],
+  ])("keeps an %s current-event participant without extending retention", async (_label, lastActiveAt) => {
+    const profile = chain({
+      data: {
+        gender: "M", banned: false,
+        retention_accepted_at: "2020-01-01T00:00:00Z", last_active_at: lastActiveAt,
+      }, error: null,
+    });
+    const empty = chain({ data: null, error: null });
+    const config = chain({
+      data: {
+        event_id: "10000000-0000-4000-8000-000000000001",
+        ends_at: "2099-02-01T00:00:00Z", purging: false,
+      }, error: null,
+    });
+    const cards = chain({ data: null, count: 1, error: null });
+    cards.eq.mockResolvedValue({ count: 1, error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: [{ banned: false }], error: null });
+    const deleteUser = vi.fn();
+    mocks.admin.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => ({
+        users: profile, banned_emails: empty, permanent_bans: empty,
+        session_config: config, cards,
+      })[table]),
+      auth: { admin: { deleteUser } },
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, next: "/board" });
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("admin_event_participant_state", { p_user_id: "user-1" });
   });
 });
