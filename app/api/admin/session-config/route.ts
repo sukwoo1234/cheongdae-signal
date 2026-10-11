@@ -35,6 +35,11 @@ export async function PATCH(req: Request) {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return NextResponse.json({ error: "INVALID_BODY" }, { status: 400 });
   }
+  const expectedEventId = body.expected_event_id;
+  if (typeof expectedEventId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(expectedEventId)) {
+    return NextResponse.json({ error: "EVENT_CHANGED" }, { status: 409 });
+  }
   const updates: Record<string, unknown> = {};
 
   for (const key of ALLOWED) {
@@ -94,11 +99,17 @@ export async function PATCH(req: Request) {
 
   const admin = createAdminClient();
 
-  const { data: lifecycle } = await admin
+  const { data: lifecycle, error: lifecycleError } = await admin
     .from("session_config")
-    .select("purging")
+    .select("event_id, purging")
     .eq("id", 1)
     .single();
+  if (lifecycleError || !lifecycle) {
+    return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+  }
+  if (lifecycle.event_id !== expectedEventId) {
+    return NextResponse.json({ error: "EVENT_CHANGED" }, { status: 409 });
+  }
   if (lifecycle?.purging) {
     return NextResponse.json({ error: "PURGE_IN_PROGRESS" }, { status: 409 });
   }
@@ -117,7 +128,13 @@ export async function PATCH(req: Request) {
     }
   }
 
-  const { error } = await admin.from("session_config").update(updates).eq("id", 1);
+  const { data: updated, error } = await admin.from("session_config")
+    .update(updates)
+    .eq("id", 1)
+    .eq("event_id", expectedEventId)
+    .eq("purging", false)
+    .select("id")
+    .maybeSingle();
   if (error) {
     if (error.message.includes("SEASON_RULES_LOCKED")) {
       return NextResponse.json({ error: "SEASON_RULES_LOCKED" }, { status: 409 });
@@ -127,5 +144,6 @@ export async function PATCH(req: Request) {
     }
     return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
   }
+  if (!updated) return NextResponse.json({ error: "EVENT_CHANGED" }, { status: 409 });
   return NextResponse.json({ ok: true });
 }

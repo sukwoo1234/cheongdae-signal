@@ -20,6 +20,8 @@ const student = {
   email: "audit@cju.ac.kr",
   email_confirmed_at: "2026-09-09T00:00:00Z",
 };
+const eventId = "40000000-0000-4000-8000-000000000001";
+const cardId = "20000000-0000-4000-8000-000000000001";
 
 function request(email = student.email, ip = "192.0.2.1", captcha = "valid-audit-token") {
   return new Request("https://audit.invalid/api/auth/magic-link", {
@@ -233,43 +235,91 @@ describe("login security boundary", () => {
 
   it("deletes and event-blocks a banned user instead of treating a UUID as a session token", async () => {
     const { admin } = adminMock();
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "acquire_event_admin_action" ? student.id : null,
+      error: null,
+    }));
     serverMock(
       { ...student, id: process.env.ADMIN_USER_ID!, email: "admin@example.com" },
       "aal2",
     );
     const response = await banUser(
-      new Request("https://audit.invalid/api/admin/users/test/ban", { method: "POST", headers }),
+      new Request("https://audit.invalid/api/admin/users/test/ban", {
+        method: "POST", headers, body: JSON.stringify({ expected_event_id: eventId }),
+      }),
       { params: Promise.resolve({ id: student.id }) },
     );
 
+    expect(admin.rpc).toHaveBeenCalledWith("acquire_event_admin_action", {
+      p_expected_event_id: eventId,
+      p_token: expect.any(String),
+      p_user_id: student.id,
+    });
     expect(admin.rpc).toHaveBeenCalledWith("ban_event_participant", {
       p_user_id: student.id,
       p_reason: "admin_ban",
     });
+    const actionToken = admin.rpc.mock.calls.find((call: unknown[]) => call[0] === "acquire_event_admin_action")?.[1].p_token;
+    expect(admin.rpc).toHaveBeenCalledWith("release_event_admin_action", {
+      p_expected_event_id: eventId, p_token: actionToken,
+    });
     expect(admin.auth.admin.deleteUser).toHaveBeenCalledWith(student.id);
+    const releaseOrder = admin.rpc.mock.invocationCallOrder[2];
+    expect(releaseOrder).toBeGreaterThan(admin.auth.admin.deleteUser.mock.invocationCallOrder[0]);
     expect(response.status).toBe(200);
   });
 
   it("deletes a participant account without adding an event ban", async () => {
-    const { admin, query } = adminMock();
-    query.maybeSingle.mockResolvedValueOnce({
-      data: { user_id: student.id },
+    const { admin } = adminMock();
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "acquire_event_admin_action" ? student.id : null,
       error: null,
-    });
+    }));
     serverMock(
       { ...student, id: process.env.ADMIN_USER_ID!, email: "admin@example.com" },
       "aal2",
     );
 
     const response = await removeCard(
-      new Request("https://audit.invalid/api/admin/cards/test/remove", { method: "POST", headers }),
-      { params: Promise.resolve({ id: "20000000-0000-4000-8000-000000000001" }) },
+      new Request("https://audit.invalid/api/admin/cards/test/remove", {
+        method: "POST", headers, body: JSON.stringify({ expected_event_id: eventId }),
+      }),
+      { params: Promise.resolve({ id: cardId }) },
     );
 
     expect(response.status).toBe(200);
+    expect(admin.rpc).toHaveBeenCalledWith("acquire_event_admin_action", {
+      p_expected_event_id: eventId,
+      p_token: expect.any(String),
+      p_card_id: cardId,
+    });
+    const actionToken = admin.rpc.mock.calls.find((call: unknown[]) => call[0] === "acquire_event_admin_action")?.[1].p_token;
+    expect(admin.rpc).toHaveBeenCalledWith("release_event_admin_action", {
+      p_expected_event_id: eventId, p_token: actionToken,
+    });
     expect(admin.auth.admin.deleteUser).toHaveBeenCalledWith(student.id);
-    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(admin.rpc).not.toHaveBeenCalledWith("ban_event_participant", expect.anything());
     expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("does not delete an account when the requested event has changed", async () => {
+    const { admin } = adminMock();
+    admin.rpc.mockResolvedValueOnce({ data: null, error: { message: "STALE_EVENT" } });
+    serverMock(
+      { ...student, id: process.env.ADMIN_USER_ID!, email: "admin@example.com" },
+      "aal2",
+    );
+
+    const response = await banUser(
+      new Request("https://audit.invalid/api/admin/users/test/ban", {
+        method: "POST", headers, body: JSON.stringify({ expected_event_id: eventId }),
+      }),
+      { params: Promise.resolve({ id: student.id }) },
+    );
+
+    expect(response.status).toBe(409);
+    expect(admin.auth.admin.deleteUser).not.toHaveBeenCalled();
+    expect(admin.rpc).not.toHaveBeenCalledWith("ban_event_participant", expect.anything());
   });
 
   it("reports logout revocation failure instead of a false success", async () => {

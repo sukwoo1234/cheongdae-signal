@@ -1,4 +1,4 @@
-// Isolated PGlite regression for the current migrations through 0029.
+// Isolated PGlite regression for the current migrations through 0030.
 // All identities and contacts below are synthetic; no remote service is used.
 import { createRequire } from 'node:module';
 import { readFile, readdir } from 'node:fs/promises';
@@ -54,8 +54,21 @@ for (const file of migrations) {
     .replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('current migrations through 0029 apply cleanly',
-  migrations.length >= 28 && migrations.some((name) => name.startsWith('0029_bind_event_purge_to_event')));
+secured('current migrations through 0030 apply cleanly',
+  migrations.length >= 29 && migrations.some((name) => name.startsWith('0030_bind_card_writes_to_event')));
+
+const cardRpcPrivileges = (await db.query(`
+  select
+    has_function_privilege('anon', 'public.create_event_card(uuid,uuid,text,text,text,text)', 'execute') as anon_create,
+    has_function_privilege('authenticated', 'public.create_event_card(uuid,uuid,text,text,text,text)', 'execute') as user_create,
+    has_function_privilege('service_role', 'public.create_event_card(uuid,uuid,text,text,text,text)', 'execute') as service_create,
+    has_function_privilege('anon', 'public.update_event_card(uuid,uuid,text,text,text,text,boolean)', 'execute') as anon_update,
+    has_function_privilege('authenticated', 'public.update_event_card(uuid,uuid,text,text,text,text,boolean)', 'execute') as user_update,
+    has_function_privilege('service_role', 'public.update_event_card(uuid,uuid,text,text,text,text,boolean)', 'execute') as service_update
+`)).rows[0];
+secured('card write RPCs execute only for the service role',
+  !cardRpcPrivileges.anon_create && !cardRpcPrivileges.user_create && cardRpcPrivileges.service_create
+  && !cardRpcPrivileges.anon_update && !cardRpcPrivileges.user_update && cardRpcPrivileges.service_update);
 
 const A = '10000000-0000-4000-8000-000000000001';
 const B = '10000000-0000-4000-8000-000000000002';
@@ -133,6 +146,9 @@ await owner();
 await db.query('update public.users set retention_accepted_at=now() where id in ($1,$2)', [B, D]);
 await db.query("select public.add_permanent_ban($1,'test',$2)", [emails[3], A]);
 await db.query('select public.begin_event_purge($1,$2)', [initialEvent, purgeToken]);
+await rejected('card creation is blocked while the event purge lease is active',
+  () => db.query('select public.create_event_card($1,$2,$3,$4,$5,$6)',
+    [initialEvent, A, 'late card', 'fixture_a', 'instagram', 'yellow']), 'PURGE_IN_PROGRESS');
 await db.query('select public.purge_current_event_data($1,$2)', [initialEvent, purgeToken]);
 const nextEvent = (await db.query('select public.finish_event_purge($1,$2) as event_id', [initialEvent, purgeToken])).rows[0].event_id;
 await rejected('completed purge cannot be replayed for the next event',
@@ -154,5 +170,35 @@ secured('retained account ban sets profile and ban record',
 await rejected('newly banned retained account cannot enroll',
   () => db.query('select * from public.register_event_participant($1,$2,$3,$4)', [nextEvent, B, emails[1], 'b'.repeat(64)]),
   'PERMANENTLY_BANNED');
+
+// Rejoining reuses the same Auth/profile UUID. The old page must never write
+// to this new event just because that UUID became eligible again.
+await db.query('select * from public.register_event_participant($1,$2,$3,$4)',
+  [nextEvent, A, emails[0], 'a'.repeat(64)]);
+await rejected('old page cannot create a card after purge and rejoin',
+  () => db.query('select public.create_event_card($1,$2,$3,$4,$5,$6)',
+    [initialEvent, A, 'stale card', 'fixture_a', 'instagram', 'yellow']), 'STALE_EVENT');
+secured('old page did not create a card in the new event',
+  (await db.query('select count(*)::int as total from public.cards where user_id=$1', [A])).rows[0].total === 0);
+
+await db.query("update public.session_config set ends_at=now()-interval '1 minute' where id=1");
+await rejected('card creation rechecks event end inside the locked write',
+  () => db.query('select public.create_event_card($1,$2,$3,$4,$5,$6)',
+    [nextEvent, A, 'expired card', 'fixture_a', 'instagram', 'yellow']), 'SESSION_ENDED');
+await db.query("update public.session_config set ends_at=now()+interval '1 hour' where id=1");
+const newCardId = (await db.query('select public.create_event_card($1,$2,$3,$4,$5,$6) as id',
+  [nextEvent, A, 'new card', 'fixture_a', 'instagram', 'yellow'])).rows[0].id;
+secured('rejoined participant can create a card in the current event', Boolean(newCardId));
+await rejected('old page cannot edit or hide a new-event card',
+  () => db.query('select public.update_event_card($1,$2,$3,$4,$5,$6,$7)',
+    [initialEvent, A, 'stale edit', null, null, null, true]), 'STALE_EVENT');
+const unchangedCard = (await db.query('select one_liner,hidden_by_user from public.cards where id=$1', [newCardId])).rows[0];
+secured('rejected stale update leaves new-event card intact',
+  unchangedCard.one_liner === 'new card' && unchangedCard.hidden_by_user === false);
+await db.query('select public.update_event_card($1,$2,$3,$4,$5,$6,$7)',
+  [nextEvent, A, 'current edit', null, null, null, true]);
+const currentCard = (await db.query('select one_liner,hidden_by_user from public.cards where id=$1', [newCardId])).rows[0];
+secured('current-event update still edits and hides the card',
+  currentCard.one_liner === 'current edit' && currentCard.hidden_by_user === true);
 
 console.log(`${checks} DB security checks passed`);

@@ -56,6 +56,7 @@ export default function NewCard() {
           "X-Requested-With": "XMLHttpRequest",
         },
         body: JSON.stringify({
+          expected_event_id: season.event_id,
           one_liner: oneLiner.trim(),
           instagram_id: contactValue.trim(),
           contact_type: contactType,
@@ -79,10 +80,11 @@ export default function NewCard() {
           ALREADY_HAS_CARD: "이미 카드를 만들었어요",
           SEASON_CONSENT_REQUIRED: "운영 안내를 확인한 뒤 다시 등록해주세요",
           SEASON_CHANGED: "운영 안내가 갱신됐어요. 내용을 확인한 뒤 다시 등록해주세요",
+          EVENT_CHANGED: "운영 회차가 바뀌었어요. 새 안내를 확인한 뒤 다시 등록해주세요",
           SEASON_UNAVAILABLE: "운영 정보를 확인하지 못했어요. 잠시 후 다시 시도해주세요",
           SESSION_ENDED: "이번 운영이 종료됐어요",
         };
-        if (data.error === "SEASON_CHANGED") await loadSeason();
+        if (data.error === "SEASON_CHANGED" || data.error === "EVENT_CHANGED") await loadSeason();
         setError(msgs[data.error] || "오류가 발생했어요");
       }
     } catch {

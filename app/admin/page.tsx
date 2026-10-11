@@ -155,10 +155,12 @@ export default function AdminConsole() {
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<CardRow[]>([]);
+  const [searchEventId, setSearchEventId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   const [userEmail, setUserEmail] = useState("");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [userInfoEventId, setUserInfoEventId] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState("");
   const [loadingUser, setLoadingUser] = useState(false);
   const [banEmail, setBanEmail] = useState("");
@@ -227,7 +229,7 @@ export default function AdminConsole() {
   }), [matchOverview.mutual_pairs, normalizedMatchSearch]);
 
   async function saveConfig() {
-    if (!draft) return;
+    if (!draft || !stats) return;
     const maxViews = draft.maxViews.trim() === "" ? null : Number(draft.maxViews);
     if (maxViews !== null && !Number.isInteger(maxViews)) {
       setSaveState("error");
@@ -249,6 +251,7 @@ export default function AdminConsole() {
         "X-Requested-With": "XMLHttpRequest",
       },
       body: JSON.stringify({
+        expected_event_id: stats.config.event_id,
         starts_at: toIso(draft.startsAt),
         ends_at: toIso(draft.endsAt),
         threshold_male: draft.thresholdMale,
@@ -269,7 +272,10 @@ export default function AdminConsole() {
         INVALID_BASE_ALLOWANCE: "기본 선택 기회를 다시 선택해주세요.",
         EVENT_RULES_LOCKED: "행사가 시작되어 보드 모드와 기본 선택 기회는 변경할 수 없습니다.",
         SEASON_RULES_LOCKED: "참가자가 동의한 운영 기간·보드 모드·기본 기회는 변경할 수 없습니다.",
+        EVENT_CHANGED: "운영 회차가 바뀌었어요. 새 설정을 확인한 뒤 다시 저장해주세요.",
+        PURGE_IN_PROGRESS: "운영 자료를 정리하고 있어요. 잠시 후 다시 시도해주세요.",
       };
+      if (data.error === "EVENT_CHANGED") await loadStats(true);
       setSaveState("error");
       setSaveMessage(messages[data.error ?? ""] ?? "저장하지 못했습니다. 다시 시도해주세요.");
       return;
@@ -282,22 +288,36 @@ export default function AdminConsole() {
   }
 
   async function updateLock(next: boolean) {
+    if (!stats) return;
     const response = await fetch("/api/admin/session-config", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: JSON.stringify({ force_locked: next }),
+      body: JSON.stringify({ expected_event_id: stats.config.event_id, force_locked: next }),
     });
+    if (response.status === 409) {
+      await loadStats(true);
+      setSaveState("error");
+      setSaveMessage("운영 회차가 바뀌었어요. 새 설정을 확인해주세요.");
+      return;
+    }
     if (response.ok) await loadStats(false);
   }
 
   async function doSearch() {
     setSearching(true);
     setHasSearched(true);
+    const eventId = stats?.config.event_id ?? null;
     const response = await fetch(`/api/admin/cards?q=${encodeURIComponent(search)}`);
-    if (response.ok) setSearchResults(((await response.json()) as { cards?: CardRow[] }).cards ?? []);
+    if (response.ok) {
+      setSearchResults(((await response.json()) as { cards?: CardRow[] }).cards ?? []);
+      setSearchEventId(eventId);
+    } else {
+      setSearchResults([]);
+      setSearchEventId(null);
+    }
     setSearching(false);
   }
 
@@ -315,13 +335,20 @@ export default function AdminConsole() {
   }
 
   async function removeCard(id: string) {
+    if (!searchEventId) return;
     if (!confirm("이 사용자를 삭제해 내보낼까요? 같은 이메일로 이번 이벤트에 다시 참여할 수 있지만 이미 사용한 선택 기회는 초기화되지 않습니다.")) return;
     const response = await fetch(`/api/admin/cards/${id}/remove`, {
       method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ expected_event_id: searchEventId }),
     });
     if (!response.ok) {
-      alert("사용자를 삭제하지 못했습니다. 다시 시도해주세요.");
+      if (response.status === 409) {
+        setSearchResults([]);
+        setSearchEventId(null);
+        await loadStats(true);
+      }
+      alert(response.status === 409 ? "운영 회차가 바뀌었어요. 카드를 다시 검색해주세요." : "사용자를 삭제하지 못했습니다. 다시 시도해주세요.");
       return;
     }
     await doSearch();
@@ -329,13 +356,20 @@ export default function AdminConsole() {
   }
 
   async function banAndDeleteCard(id: string) {
+    if (!searchEventId) return;
     if (!confirm("이 사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단할까요?")) return;
     const response = await fetch(`/api/admin/cards/${id}/delete`, {
       method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ expected_event_id: searchEventId }),
     });
     if (!response.ok) {
-      alert("사용자 차단을 완료하지 못했습니다. 다시 확인해주세요.");
+      if (response.status === 409) {
+        setSearchResults([]);
+        setSearchEventId(null);
+        await loadStats(true);
+      }
+      alert(response.status === 409 ? "운영 회차가 바뀌었어요. 카드를 다시 검색해주세요." : "사용자 차단을 완료하지 못했습니다. 다시 확인해주세요.");
       return;
     }
     await doSearch();
@@ -346,9 +380,12 @@ export default function AdminConsole() {
     setLoadingUser(true);
     setUserMessage("");
     setUserInfo(null);
+    setUserInfoEventId(null);
+    const eventId = stats?.config.event_id ?? null;
     const response = await fetch(`/api/admin/users/${encodeURIComponent(userEmail.trim())}`);
     if (response.ok) {
       setUserInfo((await response.json()) as UserInfo);
+      setUserInfoEventId(eventId);
     } else {
       setUserMessage("일치하는 사용자를 찾지 못했습니다.");
     }
@@ -356,25 +393,39 @@ export default function AdminConsole() {
   }
 
   async function grantSlot(userId: string) {
+    if (!userInfoEventId) return;
     const response = await fetch(`/api/admin/users/${userId}/grant-slot`, {
       method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ expected_event_id: userInfoEventId }),
     });
-    setUserMessage(response.ok ? "추가 선택 기회 1회를 부여했습니다." : "처리하지 못했습니다.");
+    if (response.status === 409) {
+      setUserInfo(null);
+      setUserInfoEventId(null);
+      await loadStats(true);
+    }
+    setUserMessage(response.ok ? "추가 선택 기회 1회를 부여했습니다." : response.status === 409 ? "운영 회차가 바뀌었어요. 사용자를 다시 조회해주세요." : "처리하지 못했습니다.");
     if (response.ok) await loadUser();
   }
 
   async function banUser(userId: string) {
+    if (!userInfoEventId) return;
     if (!confirm("이 사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단할까요?")) return;
     const response = await fetch(`/api/admin/users/${userId}/ban`, {
       method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ expected_event_id: userInfoEventId }),
     });
+    if (response.status === 409) {
+      setUserInfo(null);
+      setUserInfoEventId(null);
+      await loadStats(true);
+    }
     if (response.ok) {
       setUserInfo(null);
       setUserMessage("사용자를 삭제하고 이번 이벤트에서 재가입할 수 없게 차단했습니다.");
     } else {
-      setUserMessage("처리하지 못했습니다.");
+      setUserMessage(response.status === 409 ? "운영 회차가 바뀌었어요. 사용자를 다시 조회해주세요." : "처리하지 못했습니다.");
     }
   }
 

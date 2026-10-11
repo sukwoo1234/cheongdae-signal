@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   if (begin.error?.message.includes("STALE_EVENT")) {
     return NextResponse.json({ error: "EVENT_CHANGED" }, { status: 409 });
   }
-  if (begin.error?.message.includes("PURGE_BUSY")) {
+  if (begin.error?.message.includes("PURGE_BUSY") || begin.error?.message.includes("MODERATION_BUSY")) {
     return NextResponse.json({ error: "PURGE_IN_PROGRESS" }, { status: 409 });
   }
   if (begin.error) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });

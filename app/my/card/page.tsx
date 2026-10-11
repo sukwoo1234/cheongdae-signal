@@ -17,6 +17,8 @@ import type { ContactType } from "@/lib/validation/contact";
 
 export default function MyCardPage() {
   const [card, setCard] = useState<MyCard | null>(null);
+  const [expectedEventId, setExpectedEventId] = useState<string | null>(null);
+  const [eventChanged, setEventChanged] = useState(false);
   const [oneLiner, setOneLiner] = useState("");
   const [contactValue, setContactValue] = useState("");
   const [contactType, setContactType] = useState<ContactType>("instagram");
@@ -31,10 +33,11 @@ export default function MyCardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/cards/me")
+    fetch("/api/cards/me", { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => {
         setCard(d.card);
+        setExpectedEventId(d.event_id ?? null);
         if (d.card) {
           setOneLiner(d.card.one_liner);
           setContactValue(d.card.instagram_id);
@@ -48,6 +51,7 @@ export default function MyCardPage() {
   }, []);
 
   async function save() {
+    if (!expectedEventId || eventChanged) return;
     setSaving(true);
     setSaveStatus("idle");
     try {
@@ -57,8 +61,9 @@ export default function MyCardPage() {
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
         },
-        body: JSON.stringify({ one_liner: oneLiner, instagram_id: contactValue, contact_type: contactType, color }),
+        body: JSON.stringify({ expected_event_id: expectedEventId, one_liner: oneLiner, instagram_id: contactValue, contact_type: contactType, color }),
       });
+      if (response.status === 409) setEventChanged(true);
       setSaveStatus(response.ok ? "success" : "error");
     } catch {
       setSaveStatus("error");
@@ -68,6 +73,7 @@ export default function MyCardPage() {
   }
 
   async function toggleHide() {
+    if (!expectedEventId || eventChanged) return;
     const next = !hidden;
     setTogglingHide(true);
     setHideError(false);
@@ -78,8 +84,9 @@ export default function MyCardPage() {
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
         },
-        body: JSON.stringify({ hidden: next }),
+        body: JSON.stringify({ expected_event_id: expectedEventId, hidden: next }),
       });
+      if (response.status === 409) setEventChanged(true);
       if (!response.ok) throw new Error("TOGGLE_FAILED");
       setHidden(next);
     } catch {
@@ -144,12 +151,12 @@ export default function MyCardPage() {
         <label className="mb-3 mt-5 flex items-center gap-2 text-sm font-bold text-[#183654]"><PaletteIcon />카드 색상</label>
         <ColorPicker selected={color} onChange={(value) => { setColor(value); setSaveStatus("idle"); }} />
 
-        <Button onClick={save} disabled={saving} className="mt-6 h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#0b2b4c,#00213e)] text-base">
+        <Button onClick={save} disabled={saving || !expectedEventId || eventChanged} className="mt-6 h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#0b2b4c,#00213e)] text-base">
           {saving ? "저장 중..." : "저장"}
         </Button>
         {saveStatus !== "idle" && (
           <p role="status" className={`mt-2 text-center text-xs ${saveStatus === "success" ? "text-[#0b8f7e]" : "text-red-600"}`}>
-            {saveStatus === "success" ? "저장했어요." : "저장하지 못했어요. 다시 시도해주세요."}
+            {saveStatus === "success" ? "저장했어요." : eventChanged ? "운영 회차가 바뀌었어요. 페이지를 새로고침해주세요." : "저장하지 못했어요. 다시 시도해주세요."}
           </p>
         )}
 
@@ -157,12 +164,12 @@ export default function MyCardPage() {
 
         <button
           onClick={toggleHide}
-          disabled={togglingHide}
+          disabled={togglingHide || !expectedEventId || eventChanged}
           className={`min-h-13 w-full rounded-2xl border-2 px-3 py-3 text-sm font-bold transition ${hidden ? "border-[#9cddd4] bg-[#eefaf8] text-[#0b8f7e]" : "border-[#ffb8c5] bg-[#fffafb] text-[#e63d58]"}`}
         >
           {togglingHide ? "변경 중..." : hidden ? "다시 보드에 올리기" : "카드 내리기 (숨기기)"}
         </button>
-        {hideError && <p role="alert" className="mt-2 text-center text-xs text-red-600">공개 상태를 바꾸지 못했어요. 다시 시도해주세요.</p>}
+        {hideError && <p role="alert" className="mt-2 text-center text-xs text-red-600">{eventChanged ? "운영 회차가 바뀌었어요. 페이지를 새로고침해주세요." : "공개 상태를 바꾸지 못했어요. 다시 시도해주세요."}</p>}
         <p className="mt-2 text-center text-[10px] text-[#8390a2]">
           이미 본 사람에게 공개된 연락처는 회수되지 않아요.
         </p>
