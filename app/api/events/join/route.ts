@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getVerifiedAccount, denialResponse } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { requireAjaxRequest } from "@/lib/csrf";
 import { createEventSubjectKey } from "@/lib/event-identity";
-import { hasActiveEventParticipation, isAccountRetentionExpired } from "@/lib/account-retention";
+import { expireRetainedAccount } from "@/lib/expire-account";
 
 /** 보유된 학교 인증 계정을 현재 회차에 명시적으로 참여시킨다. */
 export async function POST(req: Request) {
@@ -17,6 +18,20 @@ export async function POST(req: Request) {
   const { retention_consent: retentionConsent } = (await req.json().catch(() => null)) ?? {};
   const email = user.email.trim().toLowerCase();
   const admin = createAdminClient();
+
+  const { data: expiredAccountDeleted, error: expiryError } =
+    await expireRetainedAccount(admin, user.id);
+  if (expiryError || typeof expiredAccountDeleted !== "boolean") {
+    return NextResponse.json(
+      { error: expiryError?.message.includes("PURGE_IN_PROGRESS") ? "PURGE_IN_PROGRESS" : "DB_ERROR" },
+      { status: expiryError?.message.includes("PURGE_IN_PROGRESS") ? 409 : 500 },
+    );
+  }
+  if (expiredAccountDeleted) {
+    const supabase = await createClient();
+    await supabase.auth.signOut().catch(() => {});
+    return NextResponse.json({ error: "ACCOUNT_EXPIRED" }, { status: 401 });
+  }
 
   const [profileResult, eventBanResult, permanentBanResult, configResult, participantResult] = await Promise.all([
     admin
@@ -50,12 +65,6 @@ export async function POST(req: Request) {
   }
   const participant = Array.isArray(participantResult.data)
     ? participantResult.data[0] : participantResult.data;
-  if (isAccountRetentionExpired(profileResult.data.last_active_at) &&
-      !hasActiveEventParticipation(participant, configResult.data)) {
-    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
-    if (deleteError) return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
-    return NextResponse.json({ error: "ACCOUNT_EXPIRED" }, { status: 401 });
-  }
   if (profileResult.data.banned || eventBanResult.data || permanentBanResult.data) {
     return NextResponse.json({ error: "BANNED" }, { status: 403 });
   }
@@ -93,6 +102,14 @@ export async function POST(req: Request) {
       }
       if (joinError.message.includes("PARTICIPANT_BANNED")) {
         return NextResponse.json({ error: "BANNED" }, { status: 403 });
+      }
+      if (joinError.message.includes("ACCOUNT_NOT_FOUND")) {
+        const supabase = await createClient();
+        await supabase.auth.signOut().catch(() => {});
+        return NextResponse.json({ error: "ACCOUNT_EXPIRED" }, { status: 401 });
+      }
+      if (joinError.message.includes("EVENT_ENDED")) {
+        return NextResponse.json({ error: "EVENT_ENDED" }, { status: 409 });
       }
       if (joinError.message.includes("PURGE_IN_PROGRESS") || joinError.message.includes("STALE_EVENT")) {
         return NextResponse.json({ error: "EVENT_CHANGED" }, { status: 409 });

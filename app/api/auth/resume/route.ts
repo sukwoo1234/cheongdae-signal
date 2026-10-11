@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { hasActiveEventParticipation, isAccountRetentionExpired } from "@/lib/account-retention";
+import { expireRetainedAccount } from "@/lib/expire-account";
 
 function response(next: string | null, status = 200) {
   return NextResponse.json(
@@ -39,6 +39,14 @@ export async function GET() {
   // 현재 회차에 아직 합류하지 않은 보유 계정은 RLS로 public.users가
   // 보이지 않는다. 서버에서 계정과 현재 회차 원장을 따로 확인한다.
   const admin = createAdminClient();
+  const { data: expiredAccountDeleted, error: expiryError } =
+    await expireRetainedAccount(admin, user.id);
+  if (expiryError || typeof expiredAccountDeleted !== "boolean") return response(null, 503);
+  if (expiredAccountDeleted) {
+    await supabase.auth.signOut().catch(() => {});
+    return response(null, 401);
+  }
+
   const { data: profile, error: profileError } = await admin
     .from("users")
     .select("gender, banned, retention_accepted_at, last_active_at")
@@ -54,26 +62,6 @@ export async function GET() {
   if (participantError) return response(null, 503);
   const participant = Array.isArray(participantData) ? participantData[0] : participantData;
 
-  if (isAccountRetentionExpired(profile.last_active_at)) {
-    let currentEventActive = false;
-    if (participant) {
-      const { data: currentConfig, error: currentConfigError } = await admin
-        .from("session_config")
-        .select("ends_at, purging")
-        .eq("id", 1)
-        .single();
-      // 설정 조회 장애를 계정·카드 삭제로 바꾸지 않는다.
-      if (currentConfigError || !currentConfig) return response(null, 503);
-      currentEventActive = hasActiveEventParticipation(participant, currentConfig);
-    }
-
-    if (!currentEventActive) {
-      const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
-      if (deleteError) return response(null, 503);
-      await supabase.auth.signOut().catch(() => {});
-      return response(null, 401);
-    }
-  }
   if (profile.banned) return response(null, 403);
 
   if (!participant) return response("/join");

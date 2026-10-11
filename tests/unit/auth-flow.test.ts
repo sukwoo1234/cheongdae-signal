@@ -62,7 +62,11 @@ describe("finishSignIn runtime boundary", () => {
         users,
         cards,
       })[table]),
-      rpc: vi.fn().mockResolvedValue({ error: null }),
+      rpc: vi.fn(async (name: string): Promise<{ data: unknown; error: null }> => ({
+        data: name === "expire_retained_account_if_eligible" ? false :
+          name === "admin_event_participant_state" ? [] : null,
+        error: null,
+      })),
     };
     mocks.createAdminClient.mockReturnValue(admin);
 
@@ -158,7 +162,9 @@ describe("finishSignIn runtime boundary", () => {
   it("sends an account retained from a previous event to explicit rejoin", async () => {
     const { signOut, admin, users } = useValidSession();
     users.maybeSingle.mockResolvedValue({ data: { gender: "M", banned: false, last_active_at: "2099-01-01T00:00:00Z" }, error: null });
-    admin.rpc.mockResolvedValue({ data: [], error: null });
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "expire_retained_account_if_eligible" ? false : [], error: null,
+    }));
 
     const next = await finishSignIn("a".repeat(43));
 
@@ -174,7 +180,10 @@ describe("finishSignIn runtime boundary", () => {
     users.maybeSingle.mockResolvedValue({
       data: { gender: "M", banned: false, last_active_at: "2020-01-01T00:00:00Z" }, error: null,
     });
-    admin.rpc.mockResolvedValue({ data: [{ banned: false }], error: null });
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data: name === "expire_retained_account_if_eligible" ? false : [{ banned: false }],
+      error: null,
+    }));
     cards.eq.mockResolvedValue({ count: 1, error: null });
 
     expect(await finishSignIn("a".repeat(43))).toBe("/board");
@@ -185,19 +194,23 @@ describe("finishSignIn runtime boundary", () => {
     expect(admin.rpc).not.toHaveBeenCalledWith("register_event_participant", expect.anything());
   });
 
-  it("still removes an expired retained profile outside the current event", async () => {
-    const { admin, users } = useValidSession();
+  it("expires a retained account outside the current event before registering it", async () => {
+    const { admin, users, signOut } = useValidSession();
     users.maybeSingle.mockResolvedValue({
       data: { gender: "M", banned: false, last_active_at: "2020-01-01T00:00:00Z" }, error: null,
     });
     admin.rpc.mockImplementation(async (name: string) => ({
-      data: name === "admin_event_participant_state" ? [] : null,
+      data: name === "expire_retained_account_if_eligible" ? true : null,
       error: null,
     }));
 
-    expect(await finishSignIn("a".repeat(43))).toBe("/onboarding");
-    expect(users.delete).toHaveBeenCalledOnce();
-    expect(admin.rpc).toHaveBeenCalledWith("register_event_participant", expect.anything());
+    expect(await finishSignIn("a".repeat(43))).toBe("/?error=auth_failed");
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(users.delete).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("expire_retained_account_if_eligible", {
+      p_user_id: "student-id", p_cutoff: expect.any(String),
+    });
+    expect(admin.rpc).not.toHaveBeenCalledWith("register_event_participant", expect.anything());
   });
 
   it("does not extend retention after the current event ends", async () => {
@@ -210,12 +223,15 @@ describe("finishSignIn runtime boundary", () => {
       error: null,
     });
     admin.rpc.mockImplementation(async (name: string) => ({
-      data: name === "admin_event_participant_state" ? [{ banned: false }] : null,
+      data: name === "expire_retained_account_if_eligible" ? true : [{ banned: false }],
       error: null,
     }));
 
     await finishSignIn("a".repeat(43));
-    expect(users.delete).toHaveBeenCalledOnce();
+    expect(users.delete).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("expire_retained_account_if_eligible", {
+      p_user_id: "student-id", p_cutoff: expect.any(String),
+    });
   });
 
   it("rejects a permanently banned account at the callback boundary", async () => {

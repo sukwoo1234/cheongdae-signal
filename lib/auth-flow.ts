@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/auth";
 import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
 import { createEventSubjectKey } from "@/lib/event-identity";
-import { hasActiveEventParticipation, isAccountRetentionExpired } from "@/lib/account-retention";
+import { expireRetainedAccount } from "@/lib/expire-account";
 
 /**
  * 로그인 직후 공통 마무리 처리. 어느 콜백 경로로 들어왔든 여기를 지난다.
@@ -113,6 +113,16 @@ export async function finishSignIn(
     return "/?error=auth_failed";
   }
 
+  // The database serializes expiry with rejoining the current event. A stale
+  // profile or participant read must never authorize account deletion.
+  const { data: expiredAccountDeleted, error: expiryError } =
+    await expireRetainedAccount(admin, user.id);
+  if (expiryError || typeof expiredAccountDeleted !== "boolean" || expiredAccountDeleted) {
+    await supabase.auth.signOut().catch(() => {});
+    clearState();
+    return "/?error=auth_failed";
+  }
+
   const { data: foundProfile, error: profileLookupError } = await admin
     .from("users")
     .select("gender, banned, last_active_at")
@@ -124,7 +134,7 @@ export async function finishSignIn(
     return "/?error=auth_failed";
   }
 
-  let existingProfile = foundProfile;
+  const existingProfile = foundProfile;
   let participantState: { banned?: boolean } | null = null;
   if (existingProfile) {
     const { data, error } = await admin.rpc(
@@ -137,19 +147,6 @@ export async function finishSignIn(
       return "/?error=auth_failed";
     }
     participantState = (Array.isArray(data) ? data[0] : data) ?? null;
-  }
-
-  // 이전 회차의 계정은 6개월 뒤 정리한다. 현재 회차 참가자의 카드·매칭은
-  // 안내된 회차 종료일까지 유지하되, 마지막 참여 시각은 갱신하지 않는다.
-  if (existingProfile && isAccountRetentionExpired(existingProfile.last_active_at) &&
-      !hasActiveEventParticipation(participantState, config)) {
-    const { error: expiredDeleteError } = await admin.from("users").delete().eq("id", user.id);
-    if (expiredDeleteError) {
-      await supabase.auth.signOut().catch(() => {});
-      clearState();
-      return "/?error=auth_failed";
-    }
-    existingProfile = null;
   }
 
   let prof = existingProfile;

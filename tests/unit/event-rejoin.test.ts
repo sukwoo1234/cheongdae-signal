@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ account: vi.fn(), admin: vi.fn() }));
+const mocks = vi.hoisted(() => ({ account: vi.fn(), admin: vi.fn(), client: vi.fn() }));
 vi.mock("@/lib/auth", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/auth")>();
   return { ...original, getVerifiedAccount: mocks.account };
 });
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.admin }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.client }));
 
 import { POST } from "@/app/api/events/join/route";
 
@@ -34,6 +35,7 @@ function request() {
 describe("event rejoin", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.client.mockResolvedValue({ auth: { signOut: vi.fn().mockResolvedValue({ error: null }) } });
     vi.stubEnv("EVENT_IDENTITY_HMAC_KEY", "test-event-identity-key-with-at-least-32-characters");
     mocks.account.mockResolvedValue({
       user: { id: "user-1", email: "student@cju.ac.kr" },
@@ -65,7 +67,8 @@ describe("event rejoin", () => {
     });
     const cards = chain({ data: null, count: 0, error: null });
     const rpc = vi.fn(async (name: string) => ({
-      data: name === "admin_event_participant_state" ? [] : [{ remaining: 2 }],
+      data: name === "expire_retained_account_if_eligible" ? false :
+        name === "admin_event_participant_state" ? [] : [{ remaining: 2 }],
       error: null,
     }));
     mocks.admin.mockReturnValue({
@@ -110,8 +113,12 @@ describe("event rejoin", () => {
       error: null,
     });
     const deleteUser = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "expire_retained_account_if_eligible" ? true : [],
+      error: null,
+    }));
     mocks.admin.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+      rpc,
       from: vi.fn((table: string) => table === "users" ? profile : table === "session_config" ? config : empty),
       auth: { admin: { deleteUser } },
     });
@@ -120,7 +127,12 @@ describe("event rejoin", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "ACCOUNT_EXPIRED" });
-    expect(deleteUser).toHaveBeenCalledWith("user-1");
+    expect(deleteUser).not.toHaveBeenCalled();
+    const browserClient = await mocks.client.mock.results[0].value;
+    expect(browserClient.auth.signOut).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("expire_retained_account_if_eligible", {
+      p_user_id: "user-1", p_cutoff: expect.any(String),
+    });
   });
 
   it.each([
@@ -142,7 +154,10 @@ describe("event rejoin", () => {
     });
     const cards = chain({ data: null, count: 1, error: null });
     cards.eq.mockResolvedValue({ count: 1, error: null });
-    const rpc = vi.fn().mockResolvedValue({ data: [{ banned: false }], error: null });
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "expire_retained_account_if_eligible" ? false : [{ banned: false }],
+      error: null,
+    }));
     const deleteUser = vi.fn();
     mocks.admin.mockReturnValue({
       rpc,
@@ -158,6 +173,10 @@ describe("event rejoin", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, next: "/board" });
     expect(deleteUser).not.toHaveBeenCalled();
-    expect(rpc).toHaveBeenCalledExactlyOnceWith("admin_event_participant_state", { p_user_id: "user-1" });
+    expect(rpc).toHaveBeenCalledWith("expire_retained_account_if_eligible", {
+      p_user_id: "user-1", p_cutoff: expect.any(String),
+    });
+    expect(rpc).toHaveBeenCalledWith("admin_event_participant_state", { p_user_id: "user-1" });
+    expect(rpc).not.toHaveBeenCalledWith("rejoin_event_participant", expect.anything());
   });
 });

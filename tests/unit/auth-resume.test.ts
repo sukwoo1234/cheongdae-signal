@@ -12,6 +12,7 @@ function makeClient({
   endsAt = "2099-01-01T00:00:00.000Z",
   participant = true,
   lastActiveAt = "2099-01-01T00:00:00Z",
+  expiredDeleted = false,
 } = {}) {
   const profileQuery = {
     select: vi.fn(),
@@ -32,10 +33,11 @@ function makeClient({
   mocks.admin.mockReturnValue({
     auth: { admin: { deleteUser: vi.fn().mockResolvedValue({ error: null }) } },
     from: vi.fn((table: string) => table === "session_config" ? configQuery : profileQuery),
-    rpc: vi.fn().mockResolvedValue({
-      data: participant ? [{ allowance: 1, used: 0, remaining: 1, banned: false }] : [],
+    rpc: vi.fn(async (name: string) => ({
+      data: name === "expire_retained_account_if_eligible" ? expiredDeleted :
+        participant ? [{ allowance: 1, used: 0, remaining: 1, banned: false }] : [],
       error: null,
-    }),
+    })),
   });
 
   return {
@@ -107,23 +109,28 @@ describe("auth resume", () => {
     expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
 
-  it("deletes an expired account with no current-event participation", async () => {
+  it("ends the session when the database atomically expires an unjoined account", async () => {
     mocks.client.mockResolvedValue(makeClient({
-      lastActiveAt: "2020-01-01T00:00:00Z", participant: false,
+      lastActiveAt: "2020-01-01T00:00:00Z", participant: false, expiredDeleted: true,
     }));
     const response = await GET();
 
     expect(response.status).toBe(401);
-    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
+    expect(mocks.admin.mock.results[0].value.rpc).toHaveBeenCalledWith(
+      "expire_retained_account_if_eligible",
+      { p_user_id: "user-1", p_cutoff: expect.any(String) },
+    );
+    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
 
   it("deletes an expired account after its current event has ended", async () => {
     mocks.client.mockResolvedValue(makeClient({
       lastActiveAt: "2020-01-01T00:00:00Z", endsAt: "2020-01-02T00:00:00Z",
+      expiredDeleted: true,
     }));
     const response = await GET();
 
     expect(response.status).toBe(401);
-    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
+    expect(mocks.admin.mock.results[0].value.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
 });
