@@ -260,13 +260,15 @@ Authentication → URL Configuration에는 production의 `/auth/callback?*` 패�
 등록해야 하며, preview URL은 필요한 범위만 별도로 등록한다. 관리자 계정은 먼저
 검증된 TOTP factor를 등록해야 로그인 뒤 `/auth/mfa`에서 관리자 콘솔에 들어갈 수 있다.
 Supabase의 **Magic Link**와 **Confirm signup** 이메일 템플릿은 모두 링크에
-`{{ .ConfirmationURL }}`을 사용해야 요청 때 전달한 `state` 포함 callback이 보존된다.
+`{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email`을 사용한다.
+요청 때 전달한 `state`를 보존하고, 앱이 브라우저를 확인한 뒤 토큰을 교환하게 한다.
 브랜드 메일 HTML은 `supabase/templates/magic-link.html`과
 `supabase/templates/confirmation.html`에 있으며, Hosted Supabase에서는
 **Authentication → Email Templates**의 두 항목에 각각 같은 내용을 붙여 넣어야 한다.
-모바일 이메일 앱이 다른 브라우저를 열어 `state` 쿠키가 없을 때는 일반 CJU 사용자만
-콜백 화면에서 이메일 계정을 명시적으로 확인한 후 이어갈 수 있다. 관리자 계정은 이
-예외를 허용하지 않으며 동일 브라우저의 `state`와 AAL2 MFA를 계속 요구한다.
+모바일 이메일 앱이 다른 브라우저를 열어 `state` 쿠키가 없거나 만료된 경우에는
+로그인 링크를 요청한 브라우저에서 열거나, 현재 브라우저에서 링크를 다시 요청해야 한다.
+클릭 한 번으로 브라우저 확인을 생략하는 예외는 허용하지 않는다. 관리자 계정은
+동일 브라우저의 `state` 외에 AAL2 MFA도 요구한다.
 
 ---
 
@@ -294,6 +296,9 @@ supabase/migrations/
   0012            throttle 행 보존기간 정리
   0013            행사별 가명 이용 원장 · DB 접근 경계 · 안전한 폐기
   0014            카드별 공개 상한 선택 설정 복구 (null이면 무제한)
+  0015~0023       온보딩·차단·행사 통계·보드 모드 보강
+  0024~0027       보유 계정 · 연락 수단 · 연속 시즌
+  0028            세션 폐기 · 직접 API 접근 · 차단/폐기 경계
 scripts/
   verify-security.mjs   PostgREST 직접 호출 기반 인가 검증
 docs/
@@ -324,4 +329,8 @@ docs/
 - `supabase db push` 전에 staging에서 `0010`~`0013` 마이그레이션을 적용하고,
   `ADMIN_USER_ID`가 실제 Auth UUID인지 확인한다. `ADMIN_REQUIRE_MFA=true`인
   상태에서 관리자 TOTP factor가 verified인지도 확인한다.
+- `0028_enforce_security_boundaries.sql`은 DB 직접 호출에도 현재 참가 자격과
+  실제 Auth 세션을 요구한다. 애플리케이션 배포만으로 DB 접근 제한이 바뀌지 않으므로
+  해당 마이그레이션도 함께 적용한다. 로그아웃 전 토큰은 세션 폐기 후 DB 조회·매칭에
+  사용할 수 없으며, 참가 자격 없는 인증 계정은 행사 설정·집계도 조회할 수 없다.
 - 데이터 폐기는 자동화하지 않았다. 어드민이 명시적으로 실행한다

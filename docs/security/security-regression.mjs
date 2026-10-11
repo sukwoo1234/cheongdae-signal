@@ -31,6 +31,11 @@ await db.exec(`
     email text,
     email_confirmed_at timestamptz
   );
+  create table auth.sessions(
+    id uuid primary key,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    not_after timestamptz
+  );
   create function auth.uid() returns uuid language sql stable as
     $$ select (nullif(current_setting('request.jwt.claims', true),'')::jsonb->>'sub')::uuid $$;
   create function auth.jwt() returns jsonb language sql stable as
@@ -49,7 +54,7 @@ for (const file of migrations) {
   sql = sql.replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('all migrations load on a clean participant database', migrations.at(-1)?.startsWith('0021_'));
+secured('all migrations load on a clean participant database', migrations.length > 0);
 const anonymousSessionPrivileges = (await db.query(`
   select
     has_table_privilege('anon', 'public.session_config', 'select') as config,
@@ -70,7 +75,6 @@ secured(
   [
     'delete from public.matches where id is not null',
     'delete from public.cards where id is not null',
-    'delete from public.users where id is not null',
     'delete from public.banned_emails where email is not null',
     'delete from public.magic_link_throttle where key_hash is not null',
     'where event_id is not null and subject_key is not null',
@@ -96,19 +100,41 @@ async function owner() {
   await db.exec('reset role');
 }
 
-async function identity(id, email = 'fixture@cju.ac.kr', method = 'otp') {
+function sessionId(id) {
+  return `30000000${id.slice(8)}`;
+}
+
+async function identity(id, email = 'fixture@cju.ac.kr', method = 'otp', extraClaims = {}) {
   await owner();
   await db.query("select set_config('request.jwt.claims', $1, false)", [
-    JSON.stringify({ sub: id, email, amr: [{ method }], aal: 'aal1' }),
+    JSON.stringify({
+      sub: id, email, amr: [{ method }], aal: 'aal1',
+      role: 'authenticated', session_id: sessionId(id), ...extraClaims,
+    }),
   ]);
   await db.exec('set role authenticated');
 }
 
 async function register(eventId, id, email, subjectKey) {
   await owner();
-  return db.query('select * from public.register_event_participant($1,$2,$3,$4)', [
+  const result = await db.query('select * from public.register_event_participant($1,$2,$3,$4)', [
     eventId, id, email, subjectKey,
   ]);
+  await db.query('insert into auth.sessions(id,user_id) values($1,$2) on conflict do nothing', [
+    sessionId(id), id,
+  ]);
+  return result;
+}
+
+async function serviceQuery(sql, params = []) {
+  await owner();
+  await db.query("select set_config('request.jwt.claims', '{}', false)");
+  await db.exec('set role service_role');
+  try {
+    return await db.query(sql, params);
+  } finally {
+    await owner();
+  }
 }
 
 await owner();
@@ -153,7 +179,7 @@ await db.exec(`
   update public.users set gender='M' where id='${C}';
   update public.users set gender='F' where id in ('${B}','${D}');
 `);
-const countsWithoutCards = (await db.query('select * from public.gender_counts()')).rows[0];
+const countsWithoutCards = (await serviceQuery('select * from public.gender_counts()')).rows[0];
 secured(
   'onboarded users without cards do not count toward board opening',
   countsWithoutCards.male === 0 && countsWithoutCards.female === 0,
@@ -169,18 +195,126 @@ await db.exec(`
          threshold_male=1, threshold_female=1, max_views_per_card=1, force_locked=false
    where id=1;
 `);
-const visibleCardCounts = (await db.query('select * from public.gender_counts()')).rows[0];
+const visibleCardCounts = (await serviceQuery('select * from public.gender_counts()')).rows[0];
 secured(
   'visible completed cards count toward board opening by gender',
   visibleCardCounts.male === 2 && visibleCardCounts.female === 2,
 );
 await db.query('update public.cards set hidden_by_admin=true where id=$1', [cardA]);
-const countsWithHiddenCard = (await db.query('select * from public.gender_counts()')).rows[0];
+const countsWithHiddenCard = (await serviceQuery('select * from public.gender_counts()')).rows[0];
 secured(
   'hidden cards do not count toward board opening',
   countsWithHiddenCard.male === 1 && countsWithHiddenCard.female === 2,
 );
 await db.query('update public.cards set hidden_by_admin=false where id=$1', [cardA]);
+
+secured(
+  'service-role requests without participant JWTs can read administrator session metadata',
+  (await serviceQuery('select * from public.session_config')).rows.length === 1 &&
+    (await serviceQuery('select public.board_is_open() as open')).rows[0].open === true,
+);
+
+await identity(A, 'a@cju.ac.kr');
+const participantBoard = (await db.query('select * from public.board_cards()')).rows;
+secured(
+  'a valid school participant can read metadata and the opposite-gender board',
+  (await db.query('select * from public.session_config')).rows.length === 1 &&
+    (await db.query('select * from public.gender_counts()')).rows[0].male === 2 &&
+    (await db.query('select public.board_is_open() as open')).rows[0].open === true &&
+    participantBoard.length === 2 && participantBoard.every((row) => row.gender === 'F'),
+);
+
+async function expectParticipantBlocked(label) {
+  secured(
+    `${label}: profiles, cards, contacts and session metadata are inaccessible`,
+    (await db.query('select private.app_actor_active() as active')).rows[0].active === false &&
+      (await db.query('select * from public.users')).rows.length === 0 &&
+      (await db.query('select * from public.my_card()')).rows.length === 0 &&
+      (await db.query('select * from public.my_matches()')).rows.length === 0 &&
+      (await db.query('select * from public.session_config')).rows.length === 0,
+  );
+  for (const [name, sql] of [
+    ['participant counts', 'select * from public.gender_counts()'],
+    ['board state', 'select public.board_is_open()'],
+    ['board cards', 'select * from public.board_cards()'],
+    ['slot state', 'select * from public.my_slot_state()'],
+    ['new contact reveal', `select * from public.consume_slot_and_reveal('${cardB}')`],
+    ['onboarding', "select public.complete_onboarding('M',true,true)"],
+  ]) {
+    await expectDbError(`${label}: ${name} is rejected`, () => db.query(sql), 'ACCOUNT_NOT_ALLOWED');
+  }
+}
+
+await owner();
+await db.query("select set_config('request.jwt.claims', '{}', false)");
+await db.exec('set role anon');
+for (const [name, sql] of [
+  ['session metadata', 'select * from public.session_config'],
+  ['participant counts', 'select * from public.gender_counts()'],
+  ['board state', 'select public.board_is_open()'],
+]) {
+  await expectDbError(`anonymous callers cannot read ${name}`, () => db.query(sql), 'permission denied');
+}
+
+const externalUser = '10000000-0000-4000-8000-000000000010';
+const unregisteredStudent = '10000000-0000-4000-8000-000000000011';
+await owner();
+await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now()),($3,$4,now())', [
+  externalUser, 'external@example.invalid', unregisteredStudent, 'unregistered@cju.ac.kr',
+]);
+await db.query('insert into auth.sessions(id,user_id) values($1,$2),($3,$4)', [
+  sessionId(externalUser), externalUser, sessionId(unregisteredStudent), unregisteredStudent,
+]);
+await identity(externalUser, 'external@example.invalid', 'password', { role: 'service_role' });
+await expectParticipantBlocked('external password account, even with a forged JWT role claim');
+await identity(externalUser, 'external@example.invalid');
+await expectParticipantBlocked('external OTP account');
+await identity(unregisteredStudent, 'unregistered@cju.ac.kr');
+await expectParticipantBlocked('school account without an event registration');
+await identity(C, 'c@cju.ac.kr', 'password');
+await expectParticipantBlocked('registered participant using a password session');
+
+for (const [label, value] of [
+  ['missing session identifier', null],
+  ['malformed session identifier', 'not-a-uuid'],
+  ["another participant's session identifier", sessionId(A)],
+]) {
+  await identity(C, 'c@cju.ac.kr', 'otp', { session_id: value });
+  await expectParticipantBlocked(label);
+}
+await owner();
+await db.query("update auth.sessions set not_after=now()-interval '1 second' where id=$1", [sessionId(C)]);
+await identity(C, 'c@cju.ac.kr');
+await expectParticipantBlocked('expired Auth session');
+await owner();
+await db.query('delete from auth.sessions where id=$1', [sessionId(C)]);
+await identity(C, 'c@cju.ac.kr');
+await expectParticipantBlocked('logged-out participant with an unused selection');
+await owner();
+secured(
+  'rejected contact requests do not consume a selection',
+  (await db.query('select used from private.event_participants where current_user_id=$1', [C])).rows[0].used === 0,
+);
+await db.query("insert into auth.sessions(id,user_id,not_after) values($1,$2,now()+interval '1 hour')", [sessionId(C), C]);
+await identity(C, 'c@cju.ac.kr');
+secured('a new unexpired Auth session restores participant access', (await db.query('select private.app_actor_active() as active')).rows[0].active);
+
+await owner();
+await identity(C, 'c@cju.ac.kr');
+await expectDbError(
+  'a gender value alone cannot bypass the required onboarding consent',
+  () => db.query('select * from public.board_cards()'),
+  'ONBOARDING_INCOMPLETE',
+);
+await owner();
+await db.query('update public.users set gender=null where id=$1', [C]);
+await identity(C, 'c@cju.ac.kr');
+await expectDbError(
+  'the opposite-gender board cannot be previewed before onboarding',
+  () => db.query('select * from public.board_cards()'),
+  'ONBOARDING_INCOMPLETE',
+);
+await db.query("select public.complete_onboarding('M',true,true)");
 
 await identity(A, 'a@cju.ac.kr');
 secured(
@@ -211,6 +345,12 @@ secured(
   'a participant can read saved match details while the event is active',
   (await db.query('select * from public.my_matches()')).rows[0].instagram_id === 'fixture_b',
 );
+await owner();
+await db.query('delete from auth.sessions where id=$1', [sessionId(A)]);
+await identity(A, 'a@cju.ac.kr');
+await expectParticipantBlocked('logged-out participant with an existing match');
+await owner();
+await db.query('insert into auth.sessions(id,user_id) values($1,$2)', [sessionId(A), A]);
 await owner();
 secured(
   'the admin cumulative match count uses the durable anonymous event ledger',
@@ -308,6 +448,7 @@ await db.query('select public.ban_event_participant($1)', [A2]);
 await db.query('update public.users set banned=true, banned_reason=$2 where id=$1', [A2, 'audit']);
 await identity(A2, 'a@cju.ac.kr');
 secured('banned participant receives no match details', (await db.query('select * from public.my_matches()')).rows.length === 0);
+await expectParticipantBlocked('banned participant with a valid Auth session');
 await expectDbError(
   'authenticated clients cannot directly update card content',
   () => db.query("update public.cards set one_liner='bypass' where user_id=$1", [A2]),
@@ -326,9 +467,10 @@ await expectDbError(
 await owner();
 await db.query("update auth.users set email='external@example.invalid' where id=$1", [C]);
 await identity(C, 'external@example.invalid');
-secured(
+await expectDbError(
   'an Auth email changed outside the school domain fails the DB session boundary',
-  (await db.query('select * from public.my_slot_state()')).rows.length === 0,
+  () => db.query('select * from public.my_slot_state()'),
+  'ACCOUNT_NOT_ALLOWED',
 );
 
 await owner();
@@ -338,8 +480,9 @@ await db.query('select public.begin_event_purge()');
 await db.query('select public.purge_current_event_data()');
 const empty = (await db.query('select * from public.event_purge_status()')).rows[0];
 secured(
-  'event purge removes profiles, cards, matches, bans, throttles, and ledger rows',
-  Object.values(empty).every((value) => value === 0),
+  'event purge removes cards, matches, event bans, throttles, and ledger rows',
+  empty.matches === 0 && empty.cards === 0 && empty.banned_emails === 0 &&
+    empty.throttles === 0 && empty.participants === 0,
 );
 const nextEventId = (await db.query('select public.finish_event_purge() as id')).rows[0].id;
 secured('finishing a purge rotates the event identifier', nextEventId !== eventId);

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminContext } from "@/lib/auth";
+import { getAdminContext, isAdminUser } from "@/lib/auth";
 import { requireAjaxRequest } from "@/lib/csrf";
-import { isAccountRetentionExpired } from "@/lib/account-retention";
+import { accountRetentionCutoff } from "@/lib/account-retention";
 
 type PurgeStatus = {
   matches: number;
@@ -13,14 +13,17 @@ type PurgeStatus = {
   participants: number;
 };
 
+const MAX_AUTH_DELETES_PER_REQUEST = 100;
+const AUTH_PAGE_SIZE = 100;
+
 function firstRow<T>(value: T[] | T | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 /**
- * DB 쓰기를 먼저 잠그고 참가자 데이터를 한 트랜잭션에서 비운다. Auth API는
- * PostgreSQL 트랜잭션에 포함할 수 없으므로, 실패하면 purging 상태를 유지해
- * 신규 참가를 막고 같은 요청을 안전하게 재실행할 수 있게 한다.
+ * 행사 내용을 먼저 잠근 뒤 지운다. Auth API 삭제는 DB 트랜잭션에 묶을 수 없으므로
+ * 한 요청에서 삭제할 계정 수를 제한하고, 완료될 때까지 purging 상태를 유지한다.
+ * 동일한 관리자 요청을 다시 보내면 남은 계정부터 안전하게 이어서 처리한다.
  */
 export async function POST(req: Request) {
   const csrfError = requireAjaxRequest(req);
@@ -57,24 +60,95 @@ export async function POST(req: Request) {
   }
 
   let deletedAuthUsers = 0;
+  let pendingAccountCleanup = false;
+  let pendingProfileCount: number | null = null;
+  let budget = MAX_AUTH_DELETES_PER_REQUEST;
+
   if (errors.length === 0) {
-    // 보유에 동의하지 않았거나 마지막 참여 후 6개월이 지난 계정만 지운다.
-    // 회차 카드·연락처·매칭은 위 DB RPC에서 이미 모두 파기됐다.
-    const { data: accounts, error: accountsError } = await admin
-      .from("users")
-      .select("id, last_active_at, retention_accepted_at");
-    if (accountsError) {
-      errors.push(`accounts: ${accountsError.message}`);
-    } else {
-      const targets = (accounts ?? []).filter((account) => {
-        return !account.retention_accepted_at || isAccountRetentionExpired(account.last_active_at);
-      });
-      for (const target of targets) {
-        const { error: deleteError } = await admin.auth.admin.deleteUser(target.id);
-        if (deleteError) {
-          errors.push(`deleteUser(${target.id.slice(0, 8)}): ${deleteError.message}`);
-        } else {
-          deletedAuthUsers++;
+    // WHERE 없는 SELECT는 PostgREST의 max_rows(이 프로젝트는 1000)에 잘린다.
+    // 삭제하면서 offset을 넘겨도 행이 당겨져 누락되므로, 항상 첫 대상 배치를 읽는다.
+    const cutoff = accountRetentionCutoff().toISOString();
+    for (const kind of ["no_consent", "expired"] as const) {
+      if (budget === 0 || errors.length > 0) break;
+      const query = admin.from("users").select("id");
+      const result = kind === "no_consent"
+        ? await query.is("retention_accepted_at", null).limit(budget)
+        : await query.lt("last_active_at", cutoff).limit(budget);
+      if (result.error) {
+        errors.push(`accounts(${kind}): ${result.error.message}`);
+        break;
+      }
+
+      for (const account of result.data ?? []) {
+        const { error } = await admin.auth.admin.deleteUser(account.id);
+        if (error) {
+          errors.push(`deleteUser(${account.id.slice(0, 8)}): ${error.message}`);
+          break;
+        }
+        deletedAuthUsers++;
+        budget--;
+      }
+    }
+
+    if (errors.length === 0) {
+      // 완료 판정은 반환된 행 수가 아니라 서버의 정확한 count로 한다.
+      const [noConsent, expired] = await Promise.all([
+        admin.from("users").select("id", { count: "exact", head: true })
+          .is("retention_accepted_at", null),
+        admin.from("users").select("id", { count: "exact", head: true })
+          .lt("last_active_at", cutoff),
+      ]);
+      if (noConsent.error || expired.error || noConsent.count === null || expired.count === null) {
+        errors.push("accounts(remaining): count failed");
+      } else {
+        pendingProfileCount = noConsent.count + expired.count;
+        pendingAccountCleanup = pendingProfileCount > 0;
+      }
+    }
+
+    // 보유 동의 이전에 발송된 매직링크는 auth.users만 만들 수 있다. Auth 전체를
+    // 페이지별로 읽고 각 페이지의 프로필 유무를 확인한다. 목록을 순회하는 동안
+    // 삭제하면 page offset이 밀리므로 현재 페이지 검색을 끝낸 뒤 삭제한다.
+    if (errors.length === 0 && !pendingAccountCleanup) {
+      if (budget === 0) {
+        pendingAccountCleanup = true;
+      } else {
+        for (let page = 1; ; page++) {
+          const { data, error } = await admin.auth.admin.listUsers({ page, perPage: AUTH_PAGE_SIZE });
+          if (error || !data || !Array.isArray(data.users)) {
+            errors.push(`listUsers: ${error?.message ?? "missing users"}`);
+            break;
+          }
+
+          const candidates = data.users.filter((candidate) => !isAdminUser(candidate));
+          if (candidates.length > 0) {
+            const { data: profiles, error: profileError } = await admin
+              .from("users")
+              .select("id")
+              .in("id", candidates.map((candidate) => candidate.id));
+            if (profileError) {
+              errors.push(`accounts(auth page ${page}): ${profileError.message}`);
+              break;
+            }
+            const profileIds = new Set((profiles ?? []).map((profile) => profile.id));
+            const orphans = candidates.filter((candidate) => !profileIds.has(candidate.id));
+            if (orphans.length > 0) {
+              pendingAccountCleanup = true;
+              for (const orphan of orphans.slice(0, budget)) {
+                const { error: deleteError } = await admin.auth.admin.deleteUser(orphan.id);
+                if (deleteError) {
+                  errors.push(`deleteUser(${orphan.id.slice(0, 8)}): ${deleteError.message}`);
+                  break;
+                }
+                deletedAuthUsers++;
+                budget--;
+              }
+              // 다시 실행해 전체 Auth 목록을 재검증한 뒤에만 완료한다.
+              break;
+            }
+          }
+
+          if (data.users.length < AUTH_PAGE_SIZE) break;
         }
       }
     }
@@ -86,22 +160,18 @@ export async function POST(req: Request) {
     errors.push(`status(after): ${afterResult.error?.message ?? "missing result"}`);
   }
 
-  // public.users는 auth.users를 ON DELETE CASCADE로 참조하므로 남은 프로필 수가
-  // 바로 보유 중인 인증 계정 수다. Auth 목록 전체를 다시 순회하지 않는다.
-  const remainingAuth = after?.users ?? null;
-
   const eventDataClean = !!after &&
     after.matches === 0 &&
     after.cards === 0 &&
     after.banned_emails === 0 &&
     after.throttles === 0 &&
     after.participants === 0;
-  if (errors.length === 0 && eventDataClean) {
+  if (errors.length === 0 && eventDataClean && !pendingAccountCleanup) {
     const finish = await admin.rpc("finish_event_purge");
     if (finish.error) errors.push(`finish: ${finish.error.message}`);
   }
 
-  const clean = errors.length === 0 && eventDataClean;
+  const clean = errors.length === 0 && eventDataClean && !pendingAccountCleanup;
   return NextResponse.json(
     {
       ok: clean,
@@ -118,13 +188,17 @@ export async function POST(req: Request) {
         matches: after?.matches ?? null,
         cards: after?.cards ?? null,
         users: after?.users ?? null,
-        authUsers: remainingAuth,
+        authUsers: after?.users ?? null,
         bannedEmails: after?.banned_emails ?? null,
         throttles: after?.throttles ?? null,
         participants: after?.participants ?? null,
+        pendingProfileCount,
+        pendingAccountCleanup,
       },
-      errors,
+      errors: pendingAccountCleanup && errors.length === 0
+        ? ["계정 정리가 진행 중입니다. 같은 작업을 다시 실행하세요."]
+        : errors,
     },
-    { status: clean ? 200 : 500 }
+    { status: clean ? 200 : errors.length === 0 && eventDataClean ? 202 : 500 },
   );
 }

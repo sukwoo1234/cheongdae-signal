@@ -11,6 +11,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminCli
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 
 import { finishSignIn } from "@/lib/auth-flow";
+import { POST as finishRoute } from "@/app/api/auth/finish/route";
 
 describe("finishSignIn runtime boundary", () => {
   function useValidSession(user = {
@@ -103,20 +104,54 @@ describe("finishSignIn runtime boundary", () => {
     expect(client.auth.signOut).toHaveBeenCalledOnce();
   });
 
-  it("rejects a forwarded callback without explicit cross-browser confirmation", async () => {
+  it("rejects a forwarded callback before creating an auth client", async () => {
     const { signOut } = useValidSession();
     const next = await finishSignIn("b".repeat(43));
 
     expect(next).toBe("/?error=auth_failed");
-    expect(signOut).toHaveBeenCalledOnce();
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 
-  it("allows a confirmed CJU user to continue in the email app's browser", async () => {
+  it("rejects the legacy cross-browser confirmation flag at the finish API", async () => {
     const { signOut } = useValidSession();
-    const next = await finishSignIn("b".repeat(43), { crossBrowserConfirmed: true });
+    const response = await finishRoute(new Request("https://example.com/api/auth/finish", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({ state: "b".repeat(43), cross_browser_confirmed: true }),
+    }));
 
-    expect(next).toBe("/onboarding");
+    expect(await response.json()).toEqual({ next: "/?error=auth_failed" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("finishes a school login only when the browser state matches", async () => {
+    const { signOut } = useValidSession();
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/onboarding");
+    expect(mocks.createAdminClient).toHaveBeenCalledOnce();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, ""])("rejects a missing callback state (%s)", async (state) => {
+    useValidSession();
+
+    expect(await finishSignIn(state)).toBe("/?error=auth_failed");
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+
+  it("rejects a callback when the browser state cookie is missing", async () => {
+    useValidSession();
+    mocks.cookies.mockResolvedValue({ get: vi.fn(), set: vi.fn() });
+
+    expect(await finishSignIn("a".repeat(43))).toBe("/?error=auth_failed");
+    expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
   it("sends an account retained from a previous event to explicit rejoin", async () => {
@@ -149,7 +184,7 @@ describe("finishSignIn runtime boundary", () => {
     expect(signOut).toHaveBeenCalledOnce();
   });
 
-  it("never grants the cross-browser exception to the administrator", async () => {
+  it("requires the matching browser state for administrators too", async () => {
     vi.stubEnv("ADMIN_EMAIL", "admin@example.com");
     vi.stubEnv("ADMIN_USER_ID", "admin-id");
     const { signOut } = useValidSession({
@@ -158,9 +193,10 @@ describe("finishSignIn runtime boundary", () => {
       email_confirmed_at: "2026-09-06T00:00:00Z",
     });
 
-    const next = await finishSignIn("b".repeat(43), { crossBrowserConfirmed: true });
+    const next = await finishSignIn("b".repeat(43));
 
     expect(next).toBe("/?error=auth_failed");
-    expect(signOut).toHaveBeenCalledOnce();
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 });

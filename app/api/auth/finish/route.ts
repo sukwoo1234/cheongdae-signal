@@ -8,7 +8,6 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const state = typeof body?.state === "string" ? body.state : null;
-  const crossBrowserConfirmed = body?.cross_browser_confirmed === true;
-  const next = await finishSignIn(state, { crossBrowserConfirmed });
+  const next = await finishSignIn(state);
   return NextResponse.json({ next });
 }

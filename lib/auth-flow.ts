@@ -3,13 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cookies } from "next/headers";
 import { hasMagicLinkAuthMethod, isAdminUser, isAllowedAccount } from "@/lib/auth";
 import { LOGIN_STATE_COOKIE, loginStateCookieOptions, matchesLoginState } from "@/lib/auth-state";
-import { isAllowedCJUEmail } from "@/lib/validation/email";
 import { createEventSubjectKey } from "@/lib/event-identity";
 import { isAccountRetentionExpired } from "@/lib/account-retention";
-
-type FinishSignInOptions = {
-  crossBrowserConfirmed?: boolean;
-};
 
 /**
  * 로그인 직후 공통 마무리 처리. 어느 콜백 경로로 들어왔든 여기를 지난다.
@@ -22,13 +17,19 @@ type FinishSignInOptions = {
  * @returns 리다이렉트할 경로
  */
 export async function finishSignIn(
-  providedState: string | null | undefined,
-  options: FinishSignInOptions = {}
+  providedState: string | null | undefined
 ): Promise<string> {
-  const supabase = await createClient();
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(LOGIN_STATE_COOKIE)?.value;
   const clearState = () => cookieStore.set(LOGIN_STATE_COOKIE, "", loginStateCookieOptions(0));
+
+  // Only the browser that initiated the magic-link request may finish sign-in.
+  if (!matchesLoginState(expectedState, providedState ?? undefined)) {
+    clearState();
+    return "/?error=auth_failed";
+  }
+
+  const supabase = await createClient();
 
   // getUser()만으로는 현재 로그인 방식(비밀번호/복구/매직링크)을 구분할 수 없다.
   // 서명 검증된 JWT claims의 amr을 확인해 앱의 유일한 로그인 방식만 허용한다.
@@ -46,25 +47,6 @@ export async function finishSignIn(
   }
 
   const email = user.email.toLowerCase();
-  const stateMatches = matchesLoginState(expectedState, providedState ?? undefined);
-
-  if (!stateMatches) {
-    // 이메일 앱이 매직링크를 기본 브라우저로 열면 요청 브라우저의 state 쿠키를
-    // 가져올 수 없다. 일반 CJU 사용자는 콜백 화면에서 계정을 명시적으로 확인한
-    // 경우에만 새 브라우저에서 이어간다. 관리자는 이 예외 없이 동일 브라우저와
-    // MFA를 모두 요구한다.
-    if (isAdminUser(user) || !options.crossBrowserConfirmed) {
-      await supabase.auth.signOut().catch(() => {});
-      clearState();
-      return "/?error=auth_failed";
-    }
-    if (!isAllowedCJUEmail(email)) {
-      await supabase.auth.signOut().catch(() => {});
-      clearState();
-      return "/?error=domain";
-    }
-  }
-
   if (!isAllowedAccount(user)) {
     await supabase.auth.signOut().catch(() => {});
     clearState();
