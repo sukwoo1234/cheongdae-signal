@@ -1,4 +1,4 @@
-// Isolated PGlite regression for the current migrations through 0030.
+// Isolated PGlite regression for the current migrations through 0033.
 // All identities and contacts below are synthetic; no remote service is used.
 import { createRequire } from 'node:module';
 import { readFile, readdir } from 'node:fs/promises';
@@ -54,8 +54,10 @@ for (const file of migrations) {
     .replace(/create extension if not exists (pgcrypto|pg_cron);/g, '');
   await db.exec(sql);
 }
-secured('current migrations through 0030 apply cleanly',
-  migrations.length >= 29 && migrations.some((name) => name.startsWith('0030_bind_card_writes_to_event')));
+secured('current migrations through 0033 apply cleanly',
+  migrations.length >= 32
+  && migrations.some((name) => name.startsWith('0030_bind_card_writes_to_event'))
+  && migrations.some((name) => name.startsWith('0033_board_discovery')));
 
 const cardRpcPrivileges = (await db.query(`
   select
@@ -104,9 +106,13 @@ await db.query("insert into public.cards(user_id,one_liner,instagram_id,color) v
 const anonPrivileges = (await db.query(`
   select has_table_privilege('anon','public.session_config','select') as config,
          has_function_privilege('anon','public.gender_counts()','execute') as counts,
-         has_function_privilege('anon','public.board_is_open()','execute') as board
+         has_function_privilege('anon','public.board_is_open()','execute') as board,
+         has_function_privilege('anon','public.board_cards_discovery(text,text)','execute') as discovery,
+         has_function_privilege('authenticated','public.board_cards_discovery(text,text)','execute') as participant_discovery
 `)).rows[0];
 secured('anonymous role lacks metadata and count grants', !anonPrivileges.config && !anonPrivileges.counts && !anonPrivileges.board);
+secured('discovery RPC is granted to participants and not anonymous callers',
+  !anonPrivileges.discovery && anonPrivileges.participant_discovery);
 
 await db.exec('set role service_role');
 secured('service role keeps event count access', (await db.query('select * from public.gender_counts()')).rows[0].female === 1);
@@ -117,9 +123,16 @@ await rejected('password Auth session cannot query event counts', () => db.query
 await identity(0);
 secured('valid participant sees only own event config', (await db.query('select event_id from public.session_config')).rows.length === 1);
 await rejected('onboarding-free direct board RPC is rejected', () => db.query('select * from public.board_cards()'), 'ONBOARDING_INCOMPLETE');
+await rejected('discovery RPC inherits the onboarding boundary',
+  () => db.query("select * from public.board_cards_discovery(null,'newest')"), 'ONBOARDING_INCOMPLETE');
 secured('eligible card counts remain available', (await db.query('select * from public.gender_counts()')).rows[0].male === 1);
 await db.query("select public.complete_onboarding('M',true,true)");
 secured('onboarded participant without own card keeps existing board access', (await db.query('select * from public.board_cards()')).rows.some((card) => card.one_liner === 'female card'));
+const discoveryCards = (await db.query("select * from public.board_cards_discovery(null,'newest')")).rows;
+secured('discovery exposes only permitted cards with coarse freshness and no private fields',
+  discoveryCards.length === 1 && discoveryCards[0].one_liner === 'female card'
+  && discoveryCards[0].is_new === true
+  && Object.keys(discoveryCards[0]).sort().join(',') === 'color,gender,id,is_new,one_liner');
 
 await owner();
 await db.query('delete from auth.sessions where id=$1', [sessions[0]]);
@@ -127,6 +140,8 @@ await identity(0);
 secured('revoked Auth session loses table access before token expiry', (await db.query('select * from public.session_config')).rows.length === 0);
 await rejected('revoked Auth session loses aggregate RPC access', () => db.query('select * from public.gender_counts()'), 'ACCOUNT_NOT_ALLOWED');
 await rejected('revoked Auth session loses board RPC access', () => db.query('select * from public.board_cards()'), 'ACCOUNT_NOT_ALLOWED');
+await rejected('revoked Auth session loses discovery RPC access',
+  () => db.query("select * from public.board_cards_discovery(null,'newest')"), 'ACCOUNT_NOT_ALLOWED');
 
 await owner();
 await db.query('insert into auth.sessions(id,user_id) values($1,$2)', [sessions[0], A]);
@@ -135,12 +150,19 @@ await db.query("select public.activate_continuous_season($1,'opposite')", [nextE
 await db.query('update public.session_config set force_locked=false where id=1');
 await identity(0);
 await rejected('season consent gate survives 0028 board patch', () => db.query('select * from public.board_cards()'), 'SEASON_CONSENT_REQUIRED');
+await rejected('discovery RPC inherits the viewer season-consent gate',
+  () => db.query("select * from public.board_cards_discovery(null,'newest')"), 'SEASON_CONSENT_REQUIRED');
 await db.query("select public.accept_current_season($1,$2,'opposite')", [initialEvent, nextEnd]);
 secured('unaccepted target stays absent from board', (await db.query('select * from public.board_cards()')).rows.length === 0);
+secured('unaccepted target stays absent from discovery',
+  (await db.query("select * from public.board_cards_discovery(null,'newest')")).rows.length === 0);
 await identity(2);
 await db.query("select public.accept_current_season($1,$2,'opposite')", [initialEvent, nextEnd]);
 await identity(0);
 secured('accepted target appears after both parties consent', (await db.query('select * from public.board_cards()')).rows.some((card) => card.one_liner === 'female card'));
+secured('discovery includes the target only after both parties consent',
+  (await db.query("select * from public.board_cards_discovery(null,'newest')")).rows
+    .some((card) => card.one_liner === 'female card' && card.is_new === true));
 
 await owner();
 await db.query('update public.users set retention_accepted_at=now() where id in ($1,$2)', [B, D]);
