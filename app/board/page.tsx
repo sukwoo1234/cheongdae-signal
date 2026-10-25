@@ -12,16 +12,8 @@ import { SignalBrand } from "@/components/SignalBrand";
 import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
 import { SeasonBoundary } from "@/components/SeasonBoundary";
-import type { PostitColor } from "@/lib/constants";
-import type { Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
+import type { BoardCard, Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
 import type { ContactType } from "@/lib/validation/contact";
-
-interface BoardCard {
-  id: string;
-  one_liner: string;
-  color: PostitColor;
-  gender: Gender;
-}
 
 export default function BoardPage() {
   return <SeasonBoundary><BoardContent /></SeasonBoundary>;
@@ -95,7 +87,10 @@ function BoardContent() {
       if (document.visibilityState === "visible") void loadSession();
     };
     const refreshAllWhenVisible = () => {
-      if (document.visibilityState === "visible") void loadAll();
+      if (document.visibilityState === "visible") {
+        void loadAll();
+        setReloadKey((key) => key + 1);
+      }
     };
     const t = setInterval(refreshSessionWhenVisible, 5000);
     window.addEventListener("focus", refreshAllWhenVisible);

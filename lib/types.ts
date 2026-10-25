@@ -3,6 +3,7 @@ import type { ContactType } from "./validation/contact";
 
 export type Gender = "M" | "F";
 export type BoardMode = "opposite" | "selectable";
+export type BoardSort = "random" | "newest";
 
 export interface User {
   id: string;
@@ -33,6 +34,7 @@ export interface BoardCard {
   one_liner: string;
   color: PostitColor;
   gender: Gender;
+  is_new: boolean;
 }
 
 /** my_card() RPC 반환 형태. cards 테이블 전체가 아니라 본인에게 허용된 필드만 담긴다. */

@@ -26,7 +26,8 @@ beforeEach(async () => {
       privacy_accepted_at timestamptz,last_active_at timestamptz);
     create table public.cards(id uuid primary key default gen_random_uuid(),
       user_id uuid unique references public.users(id) on delete cascade, one_liner text,instagram_id text,
-      color text,hidden_by_user boolean default false,hidden_by_admin boolean default false);
+      color text,hidden_by_user boolean default false,hidden_by_admin boolean default false,
+      created_at timestamptz not null default now(),updated_at timestamptz not null default now());
     create table public.matches(id uuid primary key default gen_random_uuid(),
       viewer_user_id uuid references public.users(id) on delete cascade,
       viewed_card_id uuid references public.cards(id) on delete cascade,
@@ -78,6 +79,7 @@ async function setup() {
         values('${card(n)}','${uid(n)}','테스트 ${n}','student${n}','instagram','pink');`);
   }
   await db.exec(sql("0027_continuous_seasons.sql"));
+  await db.exec(sql("0033_board_discovery.sql"));
   await actor(1);
 }
 
@@ -254,5 +256,139 @@ describe("continuous season conversion", () => {
       has_function_privilege('authenticated','private.refresh_season_slots(uuid,timestamptz)','execute') clock,
       has_function_privilege('service_role','public.activate_continuous_season(timestamptz,text)','execute') admin`);
     expect(r).toEqual({anon_read:false,activate:false,clock:false,admin:true});
+  });
+});
+
+describe("board discovery", () => {
+  it("marks only cards created within the last seven days, with exact boundaries and no future dates", async () => {
+    await openWithConsent();
+    // now() stays fixed throughout this transaction, including the exact boundary reads.
+    await db.exec(`begin;
+      update public.cards set created_at=case id
+        when '${card(2)}' then now()-interval '7 days'
+        when '${card(3)}' then now()-interval '7 days'+interval '1 microsecond'
+        when '${card(4)}' then now()+interval '1 microsecond'
+        when '${card(5)}' then now()
+        when '${card(6)}' then now()-interval '7 days'-interval '1 microsecond'
+        else created_at end;`);
+    const rows = await query(`select id,is_new from public.board_cards_discovery('M')
+      union all select id,is_new from public.board_cards_discovery('F') order by id`);
+    expect(rows).toEqual([
+      { id:card(2), is_new:false }, { id:card(3), is_new:true },
+      { id:card(4), is_new:false }, { id:card(5), is_new:true }, { id:card(6), is_new:false },
+    ]);
+    await db.exec("rollback");
+  });
+
+  it("orders newest cards consistently by creation time and card ID without exposing private fields", async () => {
+    await openWithConsent();
+    await db.exec(`update public.cards set created_at=now()-case
+      when id='${card(2)}' then interval '3 days' else interval '1 day' end;`);
+    const rows = await query("select * from public.board_cards_discovery('M','newest')");
+    expect(rows.map(r=>r.id)).toEqual([card(4),card(3),card(2)]);
+    expect((await query("select * from public.board_cards_discovery('M','newest')")).map(r=>r.id))
+      .toEqual(rows.map(r=>r.id));
+    for (const row of rows) {
+      expect(Object.keys(row).sort()).toEqual(["color","gender","id","is_new","one_liner"]);
+    }
+  });
+
+  it("does not make an old card new or promote it after edits or hiding and showing it again", async () => {
+    await openWithConsent();
+    await db.exec(`update public.cards set created_at=case id
+      when '${card(2)}' then now()-interval '20 days'
+      when '${card(3)}' then now()-interval '1 day'
+      else now()-interval '30 days' end;`);
+    const before = await query("select id,is_new from public.board_cards_discovery('M','newest')");
+    expect(before).toEqual([
+      { id:card(3), is_new:true }, { id:card(2), is_new:false }, { id:card(4), is_new:false },
+    ]);
+    await db.exec(`update public.cards set one_liner='새로운 소개',updated_at=now(),hidden_by_user=true
+      where id='${card(2)}';
+      update public.cards set hidden_by_user=false,updated_at=now() where id='${card(2)}';`);
+    expect(await query("select id,is_new from public.board_cards_discovery('M','newest')")).toEqual(before);
+  });
+
+  it("keeps the existing board's self, hidden, banned, viewed and card-cap filters", async () => {
+    await openWithConsent();
+    const sameBoard = async (gender: "M" | "F") => {
+      const original = await query(`select * from public.board_cards('${gender}') order by id`);
+      const discovery = await query(`select id,one_liner,color,gender
+        from public.board_cards_discovery('${gender}','newest') order by id`);
+      expect(discovery).toEqual(original);
+      return discovery;
+    };
+    expect((await sameBoard("M")).map(r=>r.id)).toEqual([card(2),card(3),card(4)]);
+    expect((await sameBoard("F")).map(r=>r.id)).toEqual([card(5),card(6)]);
+    await db.exec(`update public.cards set hidden_by_user=true where id='${card(2)}';
+      update public.cards set hidden_by_admin=true where id='${card(3)}';
+      update public.users set banned=true where id='${uid(4)}';
+      update public.session_config set max_views_per_card=1;
+      update private.event_participants set received_reveals=1 where current_user_id='${uid(5)}';
+      select * from public.consume_slot_and_reveal('${card(6)}');`);
+    expect(await sameBoard("M")).toEqual([]);
+    expect(await sameBoard("F")).toEqual([]);
+  });
+
+  it("inherits viewer and target consent, gender validation, lock, expiry and account checks", async () => {
+    await setup(); await activate();
+    await db.exec("update public.session_config set force_locked=false");
+    await expect(query("select * from public.board_cards_discovery('M')"))
+      .rejects.toThrow("SEASON_CONSENT_REQUIRED");
+    await accept();
+    expect(await query("select * from public.board_cards_discovery('M')")).toEqual([]);
+    await actor(2); await accept(); await actor(1);
+    expect((await query("select * from public.board_cards_discovery('M')")).map(r=>r.id)).toEqual([card(2)]);
+    await expect(query("select * from public.board_cards_discovery('X')"))
+      .rejects.toThrow("INVALID_TARGET_GENDER");
+    await db.exec("update public.session_config set force_locked=true");
+    await expect(query("select * from public.board_cards_discovery('M')")).rejects.toThrow("BOARD_CLOSED");
+    await db.exec(`update public.session_config set force_locked=false;
+      update public.users set banned=true where id='${uid(1)}';`);
+    await expect(query("select * from public.board_cards_discovery('M')")).rejects.toThrow("ACCOUNT_NOT_ALLOWED");
+    await db.exec(`update public.users set banned=false where id='${uid(1)}';
+      alter table public.session_config disable trigger session_config_lock_started_rules;
+      update public.session_config set ends_at=now()-interval '1 second';
+      alter table public.session_config enable trigger session_config_lock_started_rules;`);
+    await expect(query("select * from public.board_cards_discovery('M')")).rejects.toThrow("BOARD_CLOSED");
+  });
+
+  it("preserves the opposite-only legacy mode and the original RPC result shape", async () => {
+    await setup();
+    await db.exec("update public.session_config set threshold_male=1,threshold_female=1");
+    const original = await query("select * from public.board_cards() order by id");
+    expect(original.map(r=>r.id)).toEqual([card(5),card(6)]);
+    expect(await query("select id,one_liner,color,gender from public.board_cards_discovery() order by id"))
+      .toEqual(original);
+    // The old opposite mode ignores a requested gender; the wrapper must do so too.
+    expect((await query("select * from public.board_cards_discovery('M','newest')")).map(r=>r.id).sort())
+      .toEqual([card(5),card(6)]);
+    expect(Object.keys(original[0]).sort()).toEqual(["color","gender","id","one_liner"]);
+  });
+
+  it("rejects null or unknown sort values and restricts execution to authenticated callers", async () => {
+    await openWithConsent();
+    for (const sort of ["null", "'popular'", "''"]) {
+      await expect(query(`select * from public.board_cards_discovery('F',${sort})`))
+        .rejects.toThrow("INVALID_SORT");
+    }
+    const [privileges] = await query(`select
+      has_function_privilege('anon','public.board_cards_discovery(text,text)','execute') anon_read,
+      has_function_privilege('authenticated','public.board_cards_discovery(text,text)','execute') participant_read`);
+    expect(privileges).toEqual({anon_read:false,participant_read:true});
+    await db.exec("set role anon");
+    try {
+      await expect(query("select * from public.board_cards_discovery('F')"))
+        .rejects.toThrow("permission denied for function board_cards_discovery");
+    } finally {
+      await db.exec("reset role");
+    }
+    await db.exec("set role authenticated");
+    try {
+      expect((await query("select * from public.board_cards_discovery('F')")).map(r=>r.id).sort())
+        .toEqual([card(5),card(6)]);
+    } finally {
+      await db.exec("reset role");
+    }
   });
 });

@@ -8,9 +8,10 @@ interface Props {
   rotation?: number;
   className?: string;
   onClick?: () => void;
+  isNew?: boolean;
 }
 
-export function PetalCard({ text, color, size = "md", rotation, className = "", onClick }: Props) {
+export function PetalCard({ text, color, size = "md", rotation, className = "", onClick, isNew = false }: Props) {
   const hash = [...text].reduce((sum, char) => sum + (char.codePointAt(0) ?? 0), 0);
   const rot = rotation ?? [-4, 2, -1, 4][hash % 4];
   const icon = ["♡", "♬", "☕", "✈", "♧", "☾"][hash % 6];
@@ -29,9 +30,14 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
         disabled={!onClick}
         onClick={onClick}
         className={`group relative h-full w-full text-center font-semibold leading-relaxed text-[#263b59] disabled:opacity-100 ${onClick ? "cursor-pointer transition duration-200 hover:-translate-y-1 hover:scale-[1.035] active:scale-[.98] focus-visible:rounded-[42%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5c8fe3] focus-visible:ring-offset-4" : "cursor-default"}`}
-        aria-label={onClick ? `${text} 카드 선택` : undefined}
+        aria-label={onClick ? `${isNew ? "새 카드, " : ""}${text} 카드 선택` : undefined}
       >
         <PetalArtwork color={color} className="absolute inset-0 h-full w-full" style={{ filter: "drop-shadow(0 14px 18px rgba(51,82,123,.13))" }} />
+        {isNew && (
+          <span aria-hidden className="absolute right-[10%] top-[8%] rounded-full border border-white bg-[#0b6b60] px-2 py-0.5 text-[10px] font-bold leading-4 text-white shadow-sm">
+            새 카드
+          </span>
+        )}
         <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] text-[1.6em] font-normal leading-[1.22]">
           <span className="block w-full text-center [overflow-wrap:anywhere] [word-break:keep-all]">
             {text}
