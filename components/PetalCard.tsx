@@ -21,6 +21,7 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
     lg: "h-[11.4rem] w-[13.9rem] text-sm",
   };
   const palette = PETAL_PALETTES[color];
+  const fontSize = size === "md" && [...text].length > 14 ? "1.1em" : "1.6em";
   const wrapperStyle = { transform: `rotate(${rot}deg)` };
 
   return (
@@ -34,11 +35,11 @@ export function PetalCard({ text, color, size = "md", rotation, className = "", 
       >
         <PetalArtwork color={color} className="absolute inset-0 h-full w-full" style={{ filter: "drop-shadow(0 14px 18px rgba(51,82,123,.13))" }} />
         {isNew && (
-          <span aria-hidden className="absolute right-[10%] top-[8%] rounded-full border border-white bg-[#0b6b60] px-2 py-0.5 text-[10px] font-bold leading-4 text-white shadow-sm">
+          <span aria-hidden className="absolute -top-3 right-[10%] rounded-full border border-white bg-[#0b6b60] px-2 py-0.5 text-[10px] font-bold leading-4 text-white shadow-sm">
             새 카드
           </span>
         )}
-        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] text-[1.6em] font-normal leading-[1.22]">
+        <span className="signal-handwriting absolute inset-0 flex items-center justify-center px-[20%] font-normal leading-[1.22]" style={{ fontSize }}>
           <span className="block w-full text-center [overflow-wrap:anywhere] [word-break:keep-all]">
             {text}
           </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BoardGrid } from "@/components/BoardGrid";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -13,7 +13,7 @@ import { HandwrittenHeart } from "@/components/HandwrittenHeart";
 import { Gating } from "./_components/Gating";
 import { SeasonBoundary } from "@/components/SeasonBoundary";
 import type { BoardCard, Gender, SessionState, MyCard, MyMatch, SlotState } from "@/lib/types";
-import type { ContactType } from "@/lib/validation/contact";
+import { isContactType, type ContactType } from "@/lib/validation/contact";
 
 export default function BoardPage() {
   return <SeasonBoundary><BoardContent /></SeasonBoundary>;
@@ -31,6 +31,7 @@ function BoardContent() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [targetGender, setTargetGender] = useState<Gender | null>(null);
+  const revealNeedsSync = useRef(false);
   const router = useRouter();
 
   const loadSession = useCallback(async () => {
@@ -66,6 +67,12 @@ function BoardContent() {
       return;
     }
     const s: SessionState = await sRes.json();
+    const ledgerSynced = mm.slot && Number.isFinite(mm.slot.remaining) && mm.slot.remaining >= 0;
+    if (revealNeedsSync.current && !ledgerSynced) {
+      setError("선택 결과를 아직 확인하지 못했어요. 연결을 확인한 뒤 ‘내 매칭’에서 먼저 확인해주세요.");
+      return;
+    }
+    if (ledgerSynced) revealNeedsSync.current = false;
     setLoadFailed(false);
     setSessionState(s);
     setTargetGender((current) => current ?? (s.viewer_gender === "M" ? "F" : "M"));
@@ -115,45 +122,67 @@ function BoardContent() {
   }, [slot?.next_refill_at, loadAll]);
 
   async function confirmReveal() {
-    if (!pending) return;
+    if (!pending || revealing) return;
     setRevealing(true);
     setError(null);
-    const res = await fetch("/api/matches", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({ card_id: pending.id }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      setRevealed({ card: pending, contactValue: data.instagram_id, contactType: data.contact_type });
-      setPending(null);
-      if (slot) {
-        const remaining = Math.max(0, slot.remaining - 1);
-        const baseRemaining = Math.max(0, (slot.base_remaining ?? 0) - 1);
-        const bonusRemaining = Math.max(0, (slot.bonus_remaining ?? 0) - ((slot.base_remaining ?? 0) > 0 ? 0 : 1));
-        setSlot({ ...slot, used: slot.used + 1, remaining, base_remaining: baseRemaining, bonus_remaining: bonusRemaining });
-        setHasUsedSlot(remaining <= 0);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ card_id: pending.id }),
+        signal: controller.signal,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (typeof data.instagram_id !== "string" || !isContactType(data.contact_type)) {
+          throw new Error("INVALID_REVEAL_RESPONSE");
+        }
+        setRevealed({ card: pending, contactValue: data.instagram_id, contactType: data.contact_type });
+        setPending(null);
+        if (slot) {
+          const remaining = Math.max(0, slot.remaining - 1);
+          const baseRemaining = Math.max(0, (slot.base_remaining ?? 0) - 1);
+          const bonusRemaining = Math.max(0, (slot.bonus_remaining ?? 0) - ((slot.base_remaining ?? 0) > 0 ? 0 : 1));
+          setSlot({ ...slot, used: slot.used + 1, remaining, base_remaining: baseRemaining, bonus_remaining: bonusRemaining });
+          setHasUsedSlot(remaining <= 0);
+        } else {
+          setHasUsedSlot(true);
+        }
       } else {
-        setHasUsedSlot(true);
+        const msgs: Record<string, string> = {
+          SLOT_ALREADY_USED: "이미 슬롯을 사용했어요",
+          CARD_ALREADY_VIEWED: "이미 선택한 카드예요. ‘내 매칭’에서 확인해주세요.",
+          BOARD_CLOSED: "보드가 닫혀있어요",
+          CARD_HIDDEN: "이 카드는 더 이상 볼 수 없어요",
+          SAME_GENDER: "이 카드는 열 수 없어요",
+          CANNOT_VIEW_OWN_CARD: "내 카드는 열 수 없어요",
+          CARD_FULL: "이 카드는 마감됐어요. 다른 카드를 골라주세요",
+          NO_CARD: "먼저 내 카드를 등록해야 슬롯이 생겨요",
+          BANNED: "이용이 제한된 계정이에요",
+          SEASON_CONSENT_REQUIRED: "운영 변경 안내에 동의한 뒤 이용해주세요. 새로고침하면 안내가 표시됩니다.",
+        };
+        setError(msgs[data.error] || "확인 실패");
       }
-    } else {
-      const msgs: Record<string, string> = {
-        SLOT_ALREADY_USED: "이미 슬롯을 사용했어요",
-        BOARD_CLOSED: "보드가 닫혀있어요",
-        CARD_HIDDEN: "이 카드는 더 이상 볼 수 없어요",
-        SAME_GENDER: "이 카드는 열 수 없어요",
-        CANNOT_VIEW_OWN_CARD: "내 카드는 열 수 없어요",
-        CARD_FULL: "이 카드는 마감됐어요. 다른 카드를 골라주세요",
-        NO_CARD: "먼저 내 카드를 등록해야 슬롯이 생겨요",
-        BANNED: "이용이 제한된 계정이에요",
-        SEASON_CONSENT_REQUIRED: "운영 변경 안내에 동의한 뒤 이용해주세요. 새로고침하면 안내가 표시됩니다.",
-      };
-      setError(msgs[data.error] || "확인 실패");
+    } catch {
+      // The server may already have spent a choice even if its response was lost.
+      // Close the busy dialog and refresh the ledger before allowing another choice.
+      setPending(null);
+      revealNeedsSync.current = true;
+      setHasUsedSlot(true);
+      setError("선택 결과를 확인하지 못했어요. 연결을 확인한 뒤 ‘내 매칭’에서 먼저 확인해주세요.");
+      setReloadKey((key) => key + 1);
+      void loadAll().catch(() => {
+        setError("연결을 확인한 뒤 ‘내 매칭’에서 선택 결과를 확인해주세요.");
+      });
+    } finally {
+      clearTimeout(timeout);
+      setRevealing(false);
     }
-    setRevealing(false);
   }
 
   if (loadFailed) {
@@ -259,6 +288,10 @@ function BoardContent() {
           reloadKey={reloadKey}
           targetGender={sessionState.config.board_mode === "selectable" ? (targetGender ?? undefined) : undefined}
           onCardClick={(c) => {
+            if (revealNeedsSync.current) {
+              setError("선택 결과를 아직 확인하지 못했어요. 연결을 확인한 뒤 ‘내 매칭’에서 먼저 확인해주세요.");
+              return;
+            }
             if (hasUsedSlot) {
               setError(sessionState.config.continuous_mode ? "이번 주 선택 기회를 모두 사용했어요. 월요일 0시에 기본 2회가 갱신됩니다." : "슬롯을 이미 사용했어요. '내 매칭'에서 확인하세요.");
               return;
